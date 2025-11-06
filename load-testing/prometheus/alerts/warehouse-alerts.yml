@@ -1,0 +1,55 @@
+groups:
+  - name: warehouse_allocation_alerts
+    interval: 30s
+    rules:
+      # Slow warehouse allocation
+      - alert: SlowWarehouseAllocation
+        expr: histogram_quantile(0.95, rate(warehouse_allocation_duration_bucket[5m])) > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: warehouse-service
+        annotations:
+          summary: "Slow warehouse allocation algorithm"
+          description: "p95 allocation time is {{ $value }}ms (threshold: 100ms)"
+
+      # High allocation failure rate
+      - alert: HighWarehouseAllocationFailure
+        expr: |
+          (
+            sum(rate(warehouse_allocation_failure_total[5m]))
+            /
+            sum(rate(warehouse_allocation_attempts_total[5m]))
+          ) * 100 > 10
+        for: 3m
+        labels:
+          severity: critical
+          service: warehouse-service
+        annotations:
+          summary: "High warehouse allocation failure rate"
+          description: "{{ $value }}% of allocations are failing (threshold: 10%)"
+
+      # No inventory available
+      - alert: NoInventoryAvailable
+        expr: sum(rate(warehouse_allocation_failure_total{reason="no_inventory"}[5m])) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: warehouse-service
+        annotations:
+          summary: "Frequent inventory unavailability"
+          description: "{{ $value }} allocations/sec failing due to no inventory"
+
+      # Warehouse overload (too many orders to single warehouse)
+      - alert: WarehouseOverload
+        expr: |
+          max by (warehouse_name) (
+            sum by (warehouse_name) (rate(warehouse_orders_assigned_total[5m]))
+          ) > 3000
+        for: 5m
+        labels:
+          severity: warning
+          service: warehouse-service
+        annotations:
+          summary: "Warehouse {{ $labels.warehouse_name }} is overloaded"
+          description: "{{ $value }} orders/sec assigned to single warehouse (threshold: 3000/sec)"

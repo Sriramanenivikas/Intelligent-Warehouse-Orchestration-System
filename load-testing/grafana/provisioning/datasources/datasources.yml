@@ -1,0 +1,30 @@
+apiVersion: 1
+
+datasources:
+  # Prometheus - Metrics collection
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  # PostgreSQL - Order write database
+  - name: PostgreSQL-Orders
+    type: postgres
+    url: postgres:5432
+    database: iwos
+    user: iwos_user
+    secureJsonData:
+      password: iwos_password
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+
+  # MongoDB - CQRS read database
+  - name: MongoDB-Orders-Read
+    type: grafana-mongodb-datasource
+    url: mongodb://iwos_user:iwos_password@mongodb:27017/iwos_read
+    jsonData:
+      mongodb:
+        url: mongodb://iwos_user:iwos_password@mongodb:27017/iwos_read

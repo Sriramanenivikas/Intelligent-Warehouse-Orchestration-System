@@ -1,0 +1,246 @@
+version: '3.8'
+
+# COMPLETE LOAD TESTING & MONITORING STACK
+# Generates 10K orders/sec with real-time visualization
+
+services:
+  #######################################
+  # GRAFANA - Real-time Dashboards
+  #######################################
+  grafana:
+    image: grafana/grafana:latest
+    container_name: iwos-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - iwos-network
+    depends_on:
+      - prometheus
+
+  #######################################
+  # PROMETHEUS - Metrics Collection
+  #######################################
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: iwos-prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - iwos-network
+
+  #######################################
+  # JAEGER - Distributed Tracing
+  #######################################
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: iwos-jaeger
+    ports:
+      - "5775:5775/udp"    # Zipkin compact
+      - "6831:6831/udp"    # Jaeger compact
+      - "6832:6832/udp"    # Jaeger binary
+      - "5778:5778"        # Serve configs
+      - "16686:16686"      # Jaeger UI
+      - "14268:14268"      # Jaeger collector
+      - "14250:14250"      # Jaeger gRPC
+      - "9411:9411"        # Zipkin compatible
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - iwos-network
+
+  #######################################
+  # ELASTICSEARCH - Logs & Search
+  #######################################
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: iwos-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - iwos-network
+
+  #######################################
+  # KIBANA - Log Visualization
+  #######################################
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: iwos-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - iwos-network
+    depends_on:
+      - elasticsearch
+
+  #######################################
+  # GATLING - Load Testing Engine
+  #######################################
+  gatling:
+    image: denvazh/gatling:latest
+    container_name: iwos-gatling
+    volumes:
+      - ./gatling/simulations:/opt/gatling/user-files/simulations
+      - ./gatling/results:/opt/gatling/results
+      - ./gatling/conf:/opt/gatling/conf
+    networks:
+      - iwos-network
+    environment:
+      - JAVA_OPTS=-Xmx4g -Xms2g
+
+  #######################################
+  # ORDER GENERATOR SERVICE
+  # Generates realistic order data
+  #######################################
+  order-generator:
+    build:
+      context: ./order-generator
+      dockerfile: Dockerfile
+    container_name: iwos-order-generator
+    ports:
+      - "8090:8090"
+    environment:
+      - KONG_URL=http://kong:8000
+      - ORDERS_PER_SECOND=10000
+      - JAVA_OPTS=-Xmx2g
+    networks:
+      - iwos-network
+    depends_on:
+      - kong
+
+  #######################################
+  # PINCODE DATABASE (PostgreSQL)
+  # Indian pincodes with lat/lon
+  #######################################
+  pincode-db:
+    image: postgres:15-alpine
+    container_name: iwos-pincode-db
+    environment:
+      POSTGRES_DB: pincode_db
+      POSTGRES_USER: pincode_user
+      POSTGRES_PASSWORD: pincode_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - pincode_data:/var/lib/postgresql/data
+      - ./pincode-data/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - iwos-network
+
+  #######################################
+  # REDIS COMMANDER - Redis UI
+  #######################################
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: iwos-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:kong-redis:6379:0:kong_redis_password
+    networks:
+      - iwos-network
+
+  #######################################
+  # PGADMIN - PostgreSQL UI
+  #######################################
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: iwos-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@iwos.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - iwos-network
+
+  #######################################
+  # MONGO EXPRESS - MongoDB UI
+  #######################################
+  mongo-express:
+    image: mongo-express:latest
+    container_name: iwos-mongo-express
+    ports:
+      - "8082:8081"
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://mongodb:27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    networks:
+      - iwos-network
+
+  #######################################
+  # MONGODB - Read Database (CQRS)
+  #######################################
+  mongodb:
+    image: mongo:6.0
+    container_name: iwos-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - iwos-network
+
+  #######################################
+  # CUSTOM ORDER DASHBOARD
+  # Real-time order tracking
+  #######################################
+  order-dashboard:
+    build:
+      context: ./order-dashboard
+      dockerfile: Dockerfile
+    container_name: iwos-order-dashboard
+    ports:
+      - "8888:8888"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/iwos_db
+      - MONGO_URL=mongodb://mongodb:27017/iwos_read
+    networks:
+      - iwos-network
+    depends_on:
+      - kafka
+      - postgres
+      - mongodb
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  elasticsearch_data:
+  pincode_data:
+  pgadmin_data:
+  mongodb_data:
+
+networks:
+  iwos-network:
+    external: true

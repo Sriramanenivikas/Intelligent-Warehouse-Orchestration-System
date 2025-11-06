@@ -1,0 +1,63 @@
+groups:
+  - name: order_service_alerts
+    interval: 30s
+    rules:
+      # High latency alert
+      - alert: HighOrderLatency
+        expr: histogram_quantile(0.95, rate(orders_response_time_bucket[5m])) > 200
+        for: 2m
+        labels:
+          severity: warning
+          service: order-service
+        annotations:
+          summary: "High order creation latency"
+          description: "p95 latency is {{ $value }}ms (threshold: 200ms)"
+
+      # Critical latency alert
+      - alert: CriticalOrderLatency
+        expr: histogram_quantile(0.95, rate(orders_response_time_bucket[5m])) > 500
+        for: 1m
+        labels:
+          severity: critical
+          service: order-service
+        annotations:
+          summary: "CRITICAL: Order creation latency is too high"
+          description: "p95 latency is {{ $value }}ms (threshold: 500ms)"
+
+      # Low order rate (below target)
+      - alert: LowOrderRate
+        expr: rate(orders_generated_total[1m]) < 8000
+        for: 2m
+        labels:
+          severity: warning
+          service: order-generator
+        annotations:
+          summary: "Order generation rate below target"
+          description: "Current rate: {{ $value }} orders/sec (target: 10,000/sec)"
+
+      # High error rate
+      - alert: HighOrderErrorRate
+        expr: |
+          (
+            sum(rate(orders_failure_total[5m]))
+            /
+            sum(rate(orders_generated_total[5m]))
+          ) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: order-service
+        annotations:
+          summary: "High order failure rate"
+          description: "{{ $value }}% of orders are failing (threshold: 5%)"
+
+      # Service down
+      - alert: OrderServiceDown
+        expr: up{job="order-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: order-service
+        annotations:
+          summary: "Order service is down"
+          description: "Order service has been down for more than 1 minute"

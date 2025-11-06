@@ -1,0 +1,66 @@
+groups:
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # PostgreSQL connection pool exhaustion
+      - alert: PostgreSQLConnectionPoolExhausted
+        expr: pg_stat_database_numbackends{datname="iwos"} > 80
+        for: 2m
+        labels:
+          severity: warning
+          database: postgresql
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+          description: "{{ $value }} active connections (threshold: 80)"
+
+      # High PostgreSQL rollback rate
+      - alert: HighPostgreSQLRollbackRate
+        expr: |
+          (
+            rate(pg_stat_database_xact_rollback{datname="iwos"}[5m])
+            /
+            rate(pg_stat_database_xact_commit{datname="iwos"}[5m])
+          ) * 100 > 5
+        for: 3m
+        labels:
+          severity: warning
+          database: postgresql
+        annotations:
+          summary: "High transaction rollback rate"
+          description: "{{ $value }}% of transactions are rolling back"
+
+      # MongoDB connection spike
+      - alert: MongoDBHighConnections
+        expr: mongodb_connections{state="current"} > 200
+        for: 2m
+        labels:
+          severity: warning
+          database: mongodb
+        annotations:
+          summary: "MongoDB has high connection count"
+          description: "{{ $value }} active connections (threshold: 200)"
+
+      # MongoDB replication lag
+      - alert: MongoDBReplicationLag
+        expr: mongodb_replset_member_replication_lag > 10
+        for: 5m
+        labels:
+          severity: warning
+          database: mongodb
+        annotations:
+          summary: "MongoDB replication lag detected"
+          description: "Replication lag is {{ $value }} seconds"
+
+      # Redis memory usage high
+      - alert: RedisMemoryHigh
+        expr: |
+          (
+            redis_memory_used_bytes / redis_memory_max_bytes
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          cache: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "{{ $value }}% memory used (threshold: 80%)"

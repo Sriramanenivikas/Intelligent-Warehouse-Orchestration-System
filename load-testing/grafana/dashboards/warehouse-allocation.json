@@ -1,0 +1,240 @@
+{
+  "dashboard": {
+    "title": "IWOS - Warehouse Allocation & Geospatial Analytics",
+    "tags": ["iwos", "warehouse", "geospatial", "allocation"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Orders by City (Top 10)",
+        "type": "bargauge",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (city) (rate(orders_created_by_city_total[5m])))",
+            "legendFormat": "{{city}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayMode": "gradient",
+            "orientation": "horizontal"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Warehouse Load Distribution",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (warehouse_id, warehouse_name) (rate(warehouse_orders_assigned_total[5m]))",
+            "legendFormat": "{{warehouse_name}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Average Distance to Warehouse (km)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "avg(order_warehouse_distance_km)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "lengthkm",
+            "decimals": 2,
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 30, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "EXPRESS vs STANDARD Delivery Split",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(orders_created_total{delivery_type=\"EXPRESS\"}[5m])) / sum(rate(orders_created_total[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "displayName": "EXPRESS %"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Warehouse Allocation Algorithm Performance",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(warehouse_allocation_duration_bucket[5m]))",
+            "legendFormat": "p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(warehouse_allocation_duration_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(warehouse_allocation_duration_bucket[5m]))",
+            "legendFormat": "p99",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Latency (ms)",
+            "format": "ms"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 100,
+            "colorMode": "critical",
+            "op": "gt",
+            "fill": true,
+            "line": true
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Orders by Pincode (Top 20)",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "topk(20, sum by (pincode, city) (rate(orders_created_by_pincode_total[5m])))",
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "pincode": "Pincode",
+                "city": "City",
+                "Value": "Orders/sec"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Warehouse Inventory Utilization",
+        "type": "heatmap",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "warehouse_inventory_utilization_percent",
+            "legendFormat": "{{warehouse_name}}",
+            "refId": "A"
+          }
+        ],
+        "yAxis": {
+          "format": "percent"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Allocation Failures (Inventory Unavailable)",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 24, "w": 8, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(warehouse_allocation_failure_total{reason=\"no_inventory\"}[5m]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Allocation Failures (Distance Too Far)",
+        "type": "stat",
+        "gridPos": {"x": 8, "y": 24, "w": 8, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(warehouse_allocation_failure_total{reason=\"too_far\"}[5m]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Warehouse Response Time by City",
+        "type": "graph",
+        "gridPos": {"x": 16, "y": 24, "w": 8, "h": 8},
+        "targets": [
+          {
+            "expr": "avg by (city) (warehouse_allocation_duration_seconds)",
+            "legendFormat": "{{city}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Response Time (ms)",
+            "format": "ms"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-30m",
+      "to": "now"
+    },
+    "version": 1
+  }
+}

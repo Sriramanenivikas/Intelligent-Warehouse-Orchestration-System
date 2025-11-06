@@ -1,0 +1,316 @@
+{
+  "dashboard": {
+    "title": "IWOS - Order Metrics (10K/sec Load Test)",
+    "tags": ["iwos", "orders", "load-test"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Orders Per Second (Real-time)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(orders_generated_total[1m])",
+            "legendFormat": "Generated",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(orders_success_total[1m])",
+            "legendFormat": "Success",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(orders_failure_total[1m])",
+            "legendFormat": "Failed",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Orders/sec",
+            "format": "short"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [8000],
+                "type": "lt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "message": "Order rate dropped below 8K/sec!",
+          "name": "Low Order Rate Alert"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Order Latency (p50, p95, p99)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(orders_response_time_bucket[5m]))",
+            "legendFormat": "p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(orders_response_time_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(orders_response_time_bucket[5m]))",
+            "legendFormat": "p99",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Latency (ms)",
+            "format": "ms"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 100,
+            "colorMode": "custom",
+            "fill": true,
+            "line": true,
+            "op": "gt"
+          },
+          {
+            "value": 200,
+            "colorMode": "custom",
+            "fill": true,
+            "line": true,
+            "op": "gt"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Success Rate",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "(sum(rate(orders_success_total[5m])) / sum(rate(orders_generated_total[5m]))) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 95, "color": "yellow"},
+                {"value": 99, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Total Orders Generated",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "orders_generated_total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Warehouse Allocation Distribution",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 8, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (warehouse) (rate(order_warehouse_assigned_total[5m]))",
+            "legendFormat": "{{warehouse}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Orders by Delivery Type",
+        "type": "bargauge",
+        "gridPos": {"x": 18, "y": 8, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "sum by (delivery_type) (rate(orders_created_total[5m]))",
+            "legendFormat": "{{delivery_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "displayName": "Delivery Type"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Database Write Performance (PostgreSQL)",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 16, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_xact_commit{datname=\"iwos\"}[5m])",
+            "legendFormat": "Commits/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(pg_stat_database_xact_rollback{datname=\"iwos\"}[5m])",
+            "legendFormat": "Rollbacks/sec",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "MongoDB Read Performance (CQRS)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(mongodb_op_counters_total{type=\"query\"}[5m])",
+            "legendFormat": "Queries/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "mongodb_connections{state=\"current\"}",
+            "legendFormat": "Active Connections",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Kafka Message Rate",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 22, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(kafka_server_brokertopicmetrics_messagesin_total[5m])",
+            "legendFormat": "Messages In/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(kafka_server_brokertopicmetrics_bytesout_total[5m])",
+            "legendFormat": "Bytes Out/sec",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Kong API Gateway - Request Rate",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 22, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "sum(rate(kong_http_requests_total[5m])) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Kong - Latency by Service",
+        "type": "heatmap",
+        "gridPos": {"x": 0, "y": 28, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(kong_latency_bucket[5m])",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "dataFormat": "tsbuckets",
+        "yAxis": {
+          "format": "ms"
+        }
+      },
+      {
+        "id": 12,
+        "title": "System Resources - CPU Usage",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 36, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "CPU %",
+            "format": "percent",
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "System Resources - Memory Usage",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 36, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "((node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / node_memory_MemTotal_bytes) * 100",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Memory %",
+            "format": "percent",
+            "max": 100
+          }
+        ]
+      }
+    ],
+    "refresh": "5s",
+    "time": {
+      "from": "now-30m",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
+    },
+    "version": 1
+  }
+}

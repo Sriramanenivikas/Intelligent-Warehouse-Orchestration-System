@@ -1,0 +1,52 @@
+server:
+  port: 9001
+
+spring:
+  application:
+    name: order-generator
+
+  datasource:
+    url: jdbc:postgresql://pincode-db:5432/pincodes
+    username: pincode_user
+    password: pincode_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# Kong Gateway configuration
+kong:
+  gateway:
+    url: http://kong:8000
+    jwt-token: ${JWT_TOKEN:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsb2FkdGVzdCIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c}
+
+# Load test configuration
+loadtest:
+  enabled: false                    # Start with load test disabled
+  orders-per-second: 10000          # Target: 10K orders/second
+  burst-size: 100                   # Max orders per batch
+
+# Actuator endpoints for Prometheus
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.iwos: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

@@ -1,0 +1,58 @@
+groups:
+  - name: kafka_alerts
+    interval: 30s
+    rules:
+      # High consumer lag
+      - alert: HighKafkaConsumerLag
+        expr: kafka_consumergroup_lag > 10000
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High Kafka consumer lag"
+          description: "Consumer group {{ $labels.consumergroup }} has {{ $value }} messages lag on topic {{ $labels.topic }}"
+
+      # Critical consumer lag
+      - alert: CriticalKafkaConsumerLag
+        expr: kafka_consumergroup_lag > 50000
+        for: 3m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "CRITICAL: Kafka consumer lag is very high"
+          description: "Consumer group {{ $labels.consumergroup }} has {{ $value }} messages lag on topic {{ $labels.topic }}"
+
+      # Under-replicated partitions
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_server_replicamanager_underreplicatedpartitions > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka has under-replicated partitions"
+          description: "{{ $value }} partitions are under-replicated on broker {{ $labels.broker }}"
+
+      # Offline partitions
+      - alert: KafkaOfflinePartitions
+        expr: kafka_controller_kafkacontroller_offlinepartitionscount > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka has offline partitions"
+          description: "{{ $value }} partitions are offline"
+
+      # Broker down
+      - alert: KafkaBrokerDown
+        expr: up{job="kafka"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: "Kafka broker is down"
+          description: "Kafka broker {{ $labels.instance }} is down"
