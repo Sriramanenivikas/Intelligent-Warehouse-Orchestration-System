@@ -1,0 +1,183 @@
+version: '3.8'
+
+# KONG API GATEWAY SETUP
+# Industry-grade API Gateway used by Netflix, Cisco, NASA
+
+services:
+  #######################################
+  # PostgreSQL for Kong (Control Plane)
+  #######################################
+  kong-database:
+    image: postgres:15-alpine
+    container_name: iwos-kong-database
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    networks:
+      - iwos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #######################################
+  # Kong Database Migration
+  #######################################
+  kong-migration:
+    image: kong:3.4
+    container_name: iwos-kong-migration
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_PORT: 5432
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+    networks:
+      - iwos-network
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    restart: on-failure
+
+  #######################################
+  # Kong API Gateway
+  #######################################
+  kong:
+    image: kong:3.4
+    container_name: iwos-kong-gateway
+    environment:
+      # Database
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_PORT: 5432
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+
+      # Networking
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+
+      # Ports
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+
+      # Admin API
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+
+      # Performance
+      KONG_NGINX_WORKER_PROCESSES: 4
+      KONG_NGINX_WORKER_CONNECTIONS: 4096
+
+      # Plugins
+      KONG_PLUGINS: bundled,jwt,rate-limiting,cors,request-transformer,response-transformer,prometheus,zipkin
+
+      # DNS
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_DNS_RESOLVER: 8.8.8.8
+
+    ports:
+      # Proxy (API Gateway endpoints)
+      - "8000:8000"   # HTTP
+      - "8443:8443"   # HTTPS
+
+      # Admin API
+      - "8001:8001"   # HTTP Admin API
+
+    networks:
+      - iwos-network
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  #######################################
+  # Konga (Kong Admin UI)
+  # Beautiful UI for managing Kong
+  #######################################
+  konga-database:
+    image: postgres:15-alpine
+    container_name: iwos-konga-database
+    environment:
+      POSTGRES_DB: konga
+      POSTGRES_USER: konga
+      POSTGRES_PASSWORD: konga_password
+    volumes:
+      - konga_data:/var/lib/postgresql/data
+    networks:
+      - iwos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U konga"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  konga:
+    image: pantsel/konga:latest
+    container_name: iwos-konga
+    environment:
+      DB_ADAPTER: postgres
+      DB_HOST: konga-database
+      DB_PORT: 5432
+      DB_DATABASE: konga
+      DB_USER: konga
+      DB_PASSWORD: konga_password
+      NODE_ENV: production
+      KONGA_HOOK_TIMEOUT: 120000
+    ports:
+      - "1337:1337"
+    networks:
+      - iwos-network
+    depends_on:
+      konga-database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  #######################################
+  # Redis (for Rate Limiting & Caching)
+  #######################################
+  kong-redis:
+    image: redis:7-alpine
+    container_name: iwos-kong-redis
+    command: redis-server --requirepass kong_redis_password
+    ports:
+      - "6380:6379"
+    volumes:
+      - kong_redis_data:/data
+    networks:
+      - iwos-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "kong_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  kong_data:
+    driver: local
+  konga_data:
+    driver: local
+  kong_redis_data:
+    driver: local
+
+networks:
+  iwos-network:
+    external: true
