@@ -1,6 +1,8 @@
 package com.iwos.service;
 
 import com.iwos.entity.Order;
+import com.iwos.event.OrderEvent;
+import com.iwos.event.OrderEventPublisher;
 import com.iwos.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import java.util.Optional;
 public class OrderService {
 
     private final OrderRepository repository;
+    private final OrderEventPublisher eventPublisher;
 
     /**
      * Get all Orders
@@ -134,9 +137,10 @@ public class OrderService {
         log.info("Updating Order {} status to: {}", orderId, newStatus);
 
         Order order = getOrderById(orderId);
+        String oldStatus = order.getStatus();
 
         // Validate status transition
-        validateStatusTransition(order.getStatus(), newStatus);
+        validateStatusTransition(oldStatus, newStatus);
 
         order.setStatus(newStatus);
         order.setUpdatedAt(LocalDateTime.now());
@@ -144,7 +148,21 @@ public class OrderService {
         Order updatedOrder = repository.save(order);
         log.info("Order {} status updated successfully to: {}", orderId, newStatus);
 
-        // TODO: Publish OrderStatusUpdatedEvent to Kafka
+        // Publish OrderStatusUpdatedEvent to Kafka
+        try {
+            OrderEvent event = OrderEvent.orderStatusChanged(
+                order.getId(),
+                order.getOrderNumber(),
+                oldStatus,
+                newStatus
+            );
+            eventPublisher.publishOrderStatusChanged(event);
+            log.info("✅ Status change event published for order: {}", orderId);
+        } catch (Exception e) {
+            log.error("❌ Failed to publish status change event for order: {}", orderId, e);
+            // Don't fail the transaction if event publishing fails
+            // The order status is already updated in the database
+        }
 
         return updatedOrder;
     }
@@ -171,9 +189,27 @@ public class OrderService {
         Order cancelledOrder = repository.save(order);
         log.info("Order {} cancelled successfully", orderId);
 
-        // TODO: Publish OrderCancelledEvent to Kafka
-        // TODO: Initiate inventory restoration
-        // TODO: Initiate refund if payment was made
+        // Publish OrderCancelledEvent to Kafka
+        // This event triggers:
+        // 1. Inventory Service: Restores reserved inventory
+        // 2. Payment Service: Initiates refund if payment was made
+        // 3. Notification Service: Sends cancellation notification to customer
+        try {
+            OrderEvent event = OrderEvent.orderCancelled(
+                order.getId(),
+                order.getOrderNumber(),
+                "Customer requested cancellation"
+            );
+            eventPublisher.publishOrderCancelled(event);
+            log.info("✅ Order cancellation event published successfully");
+            log.info("📦 Inventory Service will automatically restore reserved inventory");
+            log.info("💳 Payment Service will initiate refund if applicable");
+        } catch (Exception e) {
+            log.error("❌ Failed to publish order cancellation event for order: {}", orderId, e);
+            // Note: The order is already cancelled in the database
+            // The compensating transactions (inventory restore, refund) may need manual intervention
+            log.warn("⚠️  Manual intervention may be required to restore inventory and process refund");
+        }
 
         return cancelledOrder;
     }

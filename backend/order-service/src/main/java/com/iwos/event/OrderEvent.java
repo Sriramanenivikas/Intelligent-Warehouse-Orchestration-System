@@ -79,4 +79,20 @@ public class OrderEvent {
             .metadata(Map.of("reason", reason))
             .build();
     }
+
+    /**
+     * Create Order Status Changed Event
+     */
+    public static OrderEvent orderStatusChanged(Long orderId, String orderNumber, String oldStatus, String newStatus) {
+        return OrderEvent.builder()
+            .eventId(java.util.UUID.randomUUID().toString())
+            .eventType("order.status.changed")
+            .timestamp(Instant.now())
+            .source("order-service")
+            .orderId(orderId)
+            .orderNumber(orderNumber)
+            .status(newStatus)
+            .metadata(Map.of("oldStatus", oldStatus, "newStatus", newStatus))
+            .build();
+    }
 }
