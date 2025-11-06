@@ -2,8 +2,11 @@ package com.iwos.repository;
 
 import com.iwos.entity.Inventory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -13,6 +16,33 @@ import java.util.Optional;
 @Repository
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
-    // Add custom query methods here
-    // Example: Optional<Inventory> findByName(String name);
+    /**
+     * Find inventory by warehouse and SKU
+     */
+    Optional<Inventory> findByWarehouseIdAndSkuId(Long warehouseId, Long skuId);
+
+    /**
+     * Find all inventory for a warehouse
+     */
+    List<Inventory> findByWarehouseId(Long warehouseId);
+
+    /**
+     * Find all inventory for a SKU across all warehouses
+     */
+    List<Inventory> findBySkuId(Long skuId);
+
+    /**
+     * Find inventory with low stock (available quantity below reorder point)
+     */
+    @Query("SELECT i FROM Inventory i JOIN SKU s ON i.skuId = s.id " +
+           "WHERE (i.quantityOnHand - i.quantityReserved) < s.reorderPoint")
+    List<Inventory> findLowStockItems();
+
+    /**
+     * Find inventory with low stock for specific warehouse
+     */
+    @Query("SELECT i FROM Inventory i JOIN SKU s ON i.skuId = s.id " +
+           "WHERE i.warehouseId = :warehouseId " +
+           "AND (i.quantityOnHand - i.quantityReserved) < s.reorderPoint")
+    List<Inventory> findLowStockItemsByWarehouse(@Param("warehouseId") Long warehouseId);
 }

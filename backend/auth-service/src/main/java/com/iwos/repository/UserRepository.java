@@ -2,6 +2,7 @@ package com.iwos.repository;
 
 import com.iwos.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -13,6 +14,29 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // Add custom query methods here
-    // Example: Optional<User> findByName(String name);
+    /**
+     * Find user by username
+     */
+    Optional<User> findByUsername(String username);
+
+    /**
+     * Find user by email
+     */
+    Optional<User> findByEmail(String email);
+
+    /**
+     * Check if user exists by username
+     */
+    boolean existsByUsername(String username);
+
+    /**
+     * Check if user exists by email
+     */
+    boolean existsByEmail(String email);
+
+    /**
+     * Find active user by username
+     */
+    @Query("SELECT u FROM User u WHERE u.username = ?1 AND u.isActive = true")
+    Optional<User> findActiveUserByUsername(String username);
 }

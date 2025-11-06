@@ -1,9 +1,17 @@
 package com.iwos.event;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iwos.dto.*;
+import com.iwos.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Order Event Consumer (in Inventory Service)
@@ -57,7 +65,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class OrderEventConsumer {
 
-    // Inject services here (InventoryService, etc.)
+    private final InventoryService inventoryService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     /**
      * Listen to order events and react accordingly
@@ -69,28 +79,37 @@ public class OrderEventConsumer {
      */
     @KafkaListener(
         topics = "order.events",
-        groupId = "inventory-service",
-        containerFactory = "kafkaListenerContainerFactory"
+        groupId = "inventory-service"
     )
     public void handleOrderEvent(String eventJson) {
-        log.info("📥 Received order event in Inventory Service");
+        log.info("Received order event in Inventory Service");
 
-        // Parse event and handle based on type
-        // Example logic:
-        /*
-        OrderEvent event = parseEvent(eventJson);
+        try {
+            // Parse event
+            OrderEvent event = objectMapper.readValue(eventJson, OrderEvent.class);
+            log.info("Parsed event type: {}, Order ID: {}",
+                    event.getEventType(),
+                    event.getOrder() != null ? event.getOrder().getOrderId() : "N/A");
 
-        switch (event.getEventType()) {
-            case "order.created":
-                handleOrderCreated(event);
-                break;
-            case "order.cancelled":
-                handleOrderCancelled(event);
-                break;
+            // Handle based on event type
+            switch (event.getEventType()) {
+                case "ORDER_CREATED":
+                    handleOrderCreated(event);
+                    break;
+                case "ORDER_CANCELLED":
+                    handleOrderCancelled(event);
+                    break;
+                case "ORDER_CONFIRMED":
+                    handleOrderConfirmed(event);
+                    break;
+                default:
+                    log.info("Ignoring event type: {}", event.getEventType());
+            }
+
+        } catch (Exception e) {
+            log.error("Error processing order event", e);
+            // In production, you might want to send to a dead letter queue
         }
-        */
-
-        log.info("✅ Order event processed by Inventory Service");
     }
 
     /**
@@ -103,18 +122,39 @@ public class OrderEventConsumer {
      * 4. If no: Publish "inventory.insufficient" event
      */
     private void handleOrderCreated(OrderEvent event) {
-        log.info("🛒 Processing order creation: {}", event.getOrderNumber());
+        OrderEvent.OrderData order = event.getOrder();
+        log.info("Processing order creation: Order #{} with {} items",
+                order.getOrderNumber(), order.getItems() != null ? order.getItems().size() : 0);
 
-        // TODO: Implement inventory reservation logic
-        // 1. Get order items from Order Service
-        // 2. Check stock availability
-        // 3. Reserve stock (increase reserved_quantity)
-        // 4. Publish success/failure event
+        try {
+            // Build reservation request from order data
+            ReserveInventoryRequest reservationRequest = ReserveInventoryRequest.builder()
+                    .orderId(order.getOrderId())
+                    .warehouseId(order.getWarehouseId())
+                    .items(order.getItems().stream()
+                            .map(item -> ReserveInventoryRequest.ReservationItem.builder()
+                                    .skuId(item.getSkuId())
+                                    .quantity(item.getQuantity())
+                                    .build())
+                            .collect(Collectors.toList()))
+                    .build();
 
-        log.info("✅ Inventory reserved for order: {}", event.getOrderNumber());
+            // Reserve inventory
+            ReservationResponse response = inventoryService.reserveInventory(reservationRequest);
 
-        // Publish event to notify other services
-        // publishInventoryReservedEvent(event);
+            if (response.getSuccess()) {
+                log.info("Successfully reserved inventory for order {}", order.getOrderNumber());
+                publishInventoryEvent(InventoryEventType.INVENTORY_RESERVED, order, response);
+            } else {
+                log.warn("Failed to reserve inventory for order {}: {}",
+                        order.getOrderNumber(), response.getErrors());
+                publishInventoryEvent(InventoryEventType.INVENTORY_INSUFFICIENT, order, response);
+            }
+
+        } catch (Exception e) {
+            log.error("Error reserving inventory for order {}", order.getOrderNumber(), e);
+            publishInventoryEvent(InventoryEventType.INVENTORY_INSUFFICIENT, order, null);
+        }
     }
 
     /**
@@ -126,27 +166,94 @@ public class OrderEventConsumer {
      * 3. Publish "inventory.released" event
      */
     private void handleOrderCancelled(OrderEvent event) {
-        log.info("❌ Processing order cancellation: {}", event.getOrderNumber());
+        OrderEvent.OrderData order = event.getOrder();
+        log.info("Processing order cancellation: Order #{}", order.getOrderNumber());
 
-        // TODO: Implement inventory release logic
-        // 1. Find reserved inventory for this order
-        // 2. Decrease reserved_quantity
-        // 3. Increase available_quantity
-        // 4. Log transaction
+        try {
+            // Build release request from order data
+            ReleaseInventoryRequest releaseRequest = ReleaseInventoryRequest.builder()
+                    .orderId(order.getOrderId())
+                    .warehouseId(order.getWarehouseId())
+                    .items(order.getItems().stream()
+                            .map(item -> ReleaseInventoryRequest.ReleaseItem.builder()
+                                    .skuId(item.getSkuId())
+                                    .quantity(item.getQuantity())
+                                    .build())
+                            .collect(Collectors.toList()))
+                    .reason("Order cancelled")
+                    .build();
 
-        log.info("✅ Inventory released for order: {}", event.getOrderNumber());
+            // Release inventory
+            ReservationResponse response = inventoryService.releaseInventory(releaseRequest);
+
+            if (response.getSuccess()) {
+                log.info("Successfully released inventory for order {}", order.getOrderNumber());
+                publishInventoryEvent(InventoryEventType.INVENTORY_RELEASED, order, response);
+            } else {
+                log.warn("Failed to release inventory for order {}: {}",
+                        order.getOrderNumber(), response.getErrors());
+            }
+
+        } catch (Exception e) {
+            log.error("Error releasing inventory for order {}", order.getOrderNumber(), e);
+        }
+    }
+
+    /**
+     * Handle order confirmed event
+     * This could be used for additional business logic like updating metrics
+     */
+    private void handleOrderConfirmed(OrderEvent event) {
+        OrderEvent.OrderData order = event.getOrder();
+        log.info("Order confirmed: Order #{} - Inventory remains reserved", order.getOrderNumber());
+        // Inventory stays reserved until order is fulfilled or cancelled
+    }
+
+    /**
+     * Publish inventory event to Kafka
+     *
+     * @param eventType Type of inventory event
+     * @param order Order data
+     * @param response Reservation/release response (can be null)
+     */
+    private void publishInventoryEvent(InventoryEventType eventType,
+                                       OrderEvent.OrderData order,
+                                       ReservationResponse response) {
+        try {
+            InventoryEvent inventoryEvent = InventoryEvent.builder()
+                    .eventType(eventType.name())
+                    .eventId(UUID.randomUUID().toString())
+                    .timestamp(LocalDateTime.now())
+                    .orderId(order.getOrderId())
+                    .orderNumber(order.getOrderNumber())
+                    .warehouseId(order.getWarehouseId())
+                    .success(response != null && response.getSuccess())
+                    .message(response != null ? response.getMessage() : "Inventory event")
+                    .build();
+
+            kafkaTemplate.send("inventory.events", inventoryEvent);
+            log.info("Published {} event for order {}", eventType, order.getOrderNumber());
+
+        } catch (Exception e) {
+            log.error("Error publishing inventory event", e);
+        }
     }
 }
 
 /**
- * Order Event DTO (copy from Order Service)
+ * Inventory Event DTO for Kafka messages
  */
-class OrderEvent {
+@lombok.Data
+@lombok.Builder
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
+class InventoryEvent {
     private String eventType;
-    private String orderNumber;
+    private String eventId;
+    private LocalDateTime timestamp;
     private Long orderId;
+    private String orderNumber;
     private Long warehouseId;
-
-    public String getEventType() { return eventType; }
-    public String getOrderNumber() { return orderNumber; }
+    private Boolean success;
+    private String message;
 }

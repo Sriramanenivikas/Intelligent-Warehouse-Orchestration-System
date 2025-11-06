@@ -1,14 +1,20 @@
 package com.iwos.service;
 
 import com.iwos.entity.RefreshToken;
+import com.iwos.entity.User;
+import com.iwos.exception.TokenException;
 import com.iwos.repository.RefreshTokenRepository;
+import com.iwos.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * RefreshToken Service
@@ -24,7 +30,93 @@ import java.util.Optional;
 @Transactional
 public class RefreshTokenService {
 
-    private final RefreshTokenRepository repository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
+
+    /**
+     * Create a new refresh token for a user
+     */
+    public RefreshToken createRefreshToken(User user) {
+        log.info("Creating refresh token for user: {}", user.getUsername());
+
+        // Generate JWT refresh token
+        String tokenString = jwtTokenProvider.generateRefreshToken(user.getUsername());
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .token(tokenString)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000))
+                .revoked(false)
+                .build();
+
+        RefreshToken savedToken = refreshTokenRepository.save(refreshToken);
+        log.info("Refresh token created successfully for user: {}", user.getUsername());
+        return savedToken;
+    }
+
+    /**
+     * Verify and get refresh token
+     */
+    @Transactional(readOnly = true)
+    public RefreshToken verifyRefreshToken(String token) {
+        log.debug("Verifying refresh token");
+
+        // Validate JWT token
+        if (!jwtTokenProvider.validateToken(token)) {
+            throw new TokenException("Invalid refresh token");
+        }
+
+        // Check token type
+        String tokenType = jwtTokenProvider.extractTokenType(token);
+        if (!"refresh".equals(tokenType)) {
+            throw new TokenException("Token is not a refresh token");
+        }
+
+        RefreshToken refreshToken = refreshTokenRepository.findValidToken(token, LocalDateTime.now())
+                .orElseThrow(() -> new TokenException("Refresh token not found or expired"));
+
+        if (refreshToken.getRevoked()) {
+            throw new TokenException("Refresh token has been revoked");
+        }
+
+        if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new TokenException("Refresh token has expired");
+        }
+
+        log.debug("Refresh token verified successfully");
+        return refreshToken;
+    }
+
+    /**
+     * Revoke a refresh token
+     */
+    public void revokeToken(String token) {
+        log.info("Revoking refresh token");
+        refreshTokenRepository.findByToken(token).ifPresent(refreshToken -> {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            log.info("Refresh token revoked successfully");
+        });
+    }
+
+    /**
+     * Revoke all tokens for a user
+     */
+    public void revokeAllUserTokens(User user) {
+        log.info("Revoking all tokens for user: {}", user.getUsername());
+        refreshTokenRepository.revokeAllUserTokens(user);
+    }
+
+    /**
+     * Delete expired tokens (cleanup job)
+     */
+    public void deleteExpiredTokens() {
+        log.info("Deleting expired refresh tokens");
+        refreshTokenRepository.deleteExpiredTokens(LocalDateTime.now());
+    }
 
     /**
      * Get all RefreshTokens
@@ -32,7 +124,7 @@ public class RefreshTokenService {
     @Transactional(readOnly = true)
     public List<RefreshToken> getAll() {
         log.info("Fetching all RefreshTokens");
-        return repository.findAll();
+        return refreshTokenRepository.findAll();
     }
 
     /**
@@ -41,7 +133,7 @@ public class RefreshTokenService {
     @Transactional(readOnly = true)
     public Optional<RefreshToken> getById(Long id) {
         log.info("Fetching RefreshToken with ID: {}", id);
-        return repository.findById(id);
+        return refreshTokenRepository.findById(id);
     }
 
     /**
@@ -49,7 +141,7 @@ public class RefreshTokenService {
      */
     public RefreshToken create(RefreshToken entity) {
         log.info("Creating new RefreshToken");
-        return repository.save(entity);
+        return refreshTokenRepository.save(entity);
     }
 
     /**
@@ -58,7 +150,7 @@ public class RefreshTokenService {
     public RefreshToken update(Long id, RefreshToken entity) {
         log.info("Updating RefreshToken with ID: {}", id);
         entity.setId(id);
-        return repository.save(entity);
+        return refreshTokenRepository.save(entity);
     }
 
     /**
@@ -66,6 +158,6 @@ public class RefreshTokenService {
      */
     public void delete(Long id) {
         log.info("Deleting RefreshToken with ID: {}", id);
-        repository.deleteById(id);
+        refreshTokenRepository.deleteById(id);
     }
 }

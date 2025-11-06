@@ -70,14 +70,59 @@ public class EventStore {
                 ) VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
                 """;
 
+            // Note: DomainEvent doesn't have aggregateType, version, occurredAt
+            // Using null for missing fields - subclasses should use the overloaded method
             jdbcTemplate.update(sql,
                 event.getEventId() != null ? event.getEventId() : UUID.randomUUID().toString(),
-                event.getAggregateType(),
+                "Unknown", // aggregateType not in DomainEvent
                 event.getAggregateId(),
                 event.getEventType(),
                 eventData,
-                event.getVersion(),
-                Timestamp.from(event.getOccurredAt())
+                1L, // default version
+                Timestamp.from(event.getTimestamp() != null ? event.getTimestamp() : Instant.now())
+            );
+
+            log.info("✅ Event saved successfully");
+
+        } catch (Exception e) {
+            log.error("❌ Failed to save event to event store", e);
+            throw new EventStoreException("Failed to save event", e);
+        }
+    }
+
+    /**
+     * Save event with all metadata (overloaded for events with full metadata)
+     *
+     * @param eventId Event ID
+     * @param aggregateType Aggregate type (e.g., "Order")
+     * @param aggregateId Aggregate ID
+     * @param eventType Event type (e.g., "OrderCreated")
+     * @param version Event version
+     * @param occurredAt Timestamp when event occurred
+     * @param eventData Full event data as object
+     */
+    public void save(String eventId, String aggregateType, String aggregateId,
+                     String eventType, Long version, Instant occurredAt, Object eventData) {
+        log.info("💾 Saving event to event store: {} (aggregate: {})", eventType, aggregateId);
+
+        try {
+            String eventJson = objectMapper.writeValueAsString(eventData);
+
+            String sql = """
+                INSERT INTO event_store (
+                    event_id, aggregate_type, aggregate_id, event_type,
+                    event_data, version, occurred_at
+                ) VALUES (?, ?, ?, ?, ?::jsonb, ?, ?)
+                """;
+
+            jdbcTemplate.update(sql,
+                eventId != null ? eventId : UUID.randomUUID().toString(),
+                aggregateType,
+                aggregateId,
+                eventType,
+                eventJson,
+                version,
+                Timestamp.from(occurredAt)
             );
 
             log.info("✅ Event saved successfully");

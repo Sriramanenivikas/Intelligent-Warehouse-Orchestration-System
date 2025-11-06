@@ -1,6 +1,7 @@
 package com.iwos.allocation;
 
-import com.iwos.domain.Warehouse;
+import com.iwos.entity.Warehouse;
+import com.iwos.dto.OrderItemDTO;
 import com.iwos.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -275,15 +276,4 @@ public class WarehouseAllocationService {
         public double getDistance() { return distance; }
         public double getScore() { return score; }
     }
-}
-
-/**
- * DTO for order items
- */
-class OrderItemDTO {
-    private String sku;
-    private Integer quantity;
-
-    public String getSku() { return sku; }
-    public Integer getQuantity() { return quantity; }
 }

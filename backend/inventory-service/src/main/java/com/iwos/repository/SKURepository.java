@@ -4,6 +4,7 @@ import com.iwos.entity.SKU;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -13,6 +14,23 @@ import java.util.Optional;
 @Repository
 public interface SKURepository extends JpaRepository<SKU, Long> {
 
-    // Add custom query methods here
-    // Example: Optional<SKU> findByName(String name);
+    /**
+     * Find SKU by SKU code
+     */
+    Optional<SKU> findBySkuCode(String skuCode);
+
+    /**
+     * Find active SKUs
+     */
+    List<SKU> findByIsActiveTrue();
+
+    /**
+     * Find SKUs by category
+     */
+    List<SKU> findByCategory(String category);
+
+    /**
+     * Check if SKU code already exists
+     */
+    boolean existsBySkuCode(String skuCode);
 }

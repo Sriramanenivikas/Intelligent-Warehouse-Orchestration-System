@@ -125,18 +125,104 @@ services:
       - iwos-network
 
   # ========================================
-  # Eureka Service Discovery (Optional)
+  # IWOS MICROSERVICES
   # ========================================
-  eureka-server:
-    image: springcloud/eureka:latest
-    container_name: iwos-eureka
+
+  # Auth Service - JWT Authentication
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: iwos-auth-service
     ports:
-      - "8761:8761"
+      - "8081:8081"
     environment:
-      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
-      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iwos_db
+      SPRING_DATASOURCE_USERNAME: iwos_user
+      SPRING_DATASOURCE_PASSWORD: iwos_password
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: iwos_redis_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-iwos-super-secret-jwt-key-change-in-production-2024}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - iwos-network
+    restart: unless-stopped
+
+  # Inventory Service - Stock Management
+  inventory-service:
+    build:
+      context: ./backend/inventory-service
+      dockerfile: Dockerfile
+    container_name: iwos-inventory-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iwos_db
+      SPRING_DATASOURCE_USERNAME: iwos_user
+      SPRING_DATASOURCE_PASSWORD: iwos_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - iwos-network
+    restart: unless-stopped
+
+  # Order Service - CQRS + Event Sourcing
+  order-service:
+    build:
+      context: ./backend/order-service
+      dockerfile: Dockerfile
+    container_name: iwos-order-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iwos_db
+      SPRING_DATASOURCE_USERNAME: iwos_user
+      SPRING_DATASOURCE_PASSWORD: iwos_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      WAREHOUSE_SERVICE_URL: http://warehouse-service:8084
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      warehouse-service:
+        condition: service_started
+    networks:
+      - iwos-network
+    restart: unless-stopped
+
+  # Warehouse Service - Geospatial Allocation
+  warehouse-service:
+    build:
+      context: ./backend/warehouse-service
+      dockerfile: Dockerfile
+    container_name: iwos-warehouse-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iwos_db
+      SPRING_DATASOURCE_USERNAME: iwos_user
+      SPRING_DATASOURCE_PASSWORD: iwos_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - iwos-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:

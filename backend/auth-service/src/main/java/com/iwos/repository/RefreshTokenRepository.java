@@ -1,9 +1,13 @@
 package com.iwos.repository;
 
 import com.iwos.entity.RefreshToken;
+import com.iwos.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -13,6 +17,33 @@ import java.util.Optional;
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
-    // Add custom query methods here
-    // Example: Optional<RefreshToken> findByName(String name);
+    /**
+     * Find refresh token by token string
+     */
+    Optional<RefreshToken> findByToken(String token);
+
+    /**
+     * Find valid (non-revoked and non-expired) refresh token
+     */
+    @Query("SELECT rt FROM RefreshToken rt WHERE rt.token = ?1 AND rt.revoked = false AND rt.expiresAt > ?2")
+    Optional<RefreshToken> findValidToken(String token, LocalDateTime now);
+
+    /**
+     * Delete all refresh tokens for a user
+     */
+    void deleteByUser(User user);
+
+    /**
+     * Revoke all tokens for a user
+     */
+    @Modifying
+    @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.user = ?1")
+    void revokeAllUserTokens(User user);
+
+    /**
+     * Delete expired tokens
+     */
+    @Modifying
+    @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < ?1")
+    void deleteExpiredTokens(LocalDateTime now);
 }

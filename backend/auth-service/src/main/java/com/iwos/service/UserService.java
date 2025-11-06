@@ -1,14 +1,26 @@
 package com.iwos.service;
 
+import com.iwos.dto.RegisterRequest;
+import com.iwos.dto.UserInfo;
+import com.iwos.entity.Role;
 import com.iwos.entity.User;
+import com.iwos.exception.AuthenticationException;
+import com.iwos.exception.UserAlreadyExistsException;
+import com.iwos.repository.RoleRepository;
 import com.iwos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * User Service
@@ -24,7 +36,113 @@ import java.util.Optional;
 @Transactional
 public class UserService {
 
-    private final UserRepository repository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Register a new user
+     */
+    public User registerUser(RegisterRequest request) {
+        log.info("Registering new user: {}", request.getUsername());
+
+        // Check if username already exists
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new UserAlreadyExistsException("Username already exists: " + request.getUsername());
+        }
+
+        // Check if email already exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new UserAlreadyExistsException("Email already exists: " + request.getEmail());
+        }
+
+        // Get default USER role or create if not exists
+        Role userRole = roleRepository.findByName("USER")
+                .orElseGet(() -> {
+                    log.info("Creating default USER role");
+                    Role newRole = Role.builder()
+                            .name("USER")
+                            .description("Default user role")
+                            .build();
+                    return roleRepository.save(newRole);
+                });
+
+        Set<Role> roles = new HashSet<>();
+        roles.add(userRole);
+
+        // Create new user
+        User user = User.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .isActive(true)
+                .roles(roles)
+                .build();
+
+        User savedUser = userRepository.save(user);
+        log.info("User registered successfully: {}", savedUser.getUsername());
+        return savedUser;
+    }
+
+    /**
+     * Authenticate user with username and password
+     */
+    @Transactional(readOnly = true)
+    public User authenticateUser(String username, String password) {
+        log.info("Authenticating user: {}", username);
+
+        User user = userRepository.findActiveUserByUsername(username)
+                .orElseThrow(() -> new AuthenticationException("Invalid username or password"));
+
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            log.warn("Failed login attempt for user: {}", username);
+            throw new AuthenticationException("Invalid username or password");
+        }
+
+        log.info("User authenticated successfully: {}", username);
+        return user;
+    }
+
+    /**
+     * Update last login time
+     */
+    public void updateLastLogin(String username) {
+        userRepository.findByUsername(username).ifPresent(user -> {
+            user.setLastLogin(LocalDateTime.now());
+            userRepository.save(user);
+            log.debug("Updated last login for user: {}", username);
+        });
+    }
+
+    /**
+     * Get user by username
+     */
+    @Transactional(readOnly = true)
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+    }
+
+    /**
+     * Convert User entity to UserInfo DTO
+     */
+    public UserInfo toUserInfo(User user) {
+        List<String> roles = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList());
+
+        return UserInfo.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .isActive(user.getIsActive())
+                .roles(roles)
+                .build();
+    }
 
     /**
      * Get all Users
@@ -32,7 +150,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<User> getAll() {
         log.info("Fetching all Users");
-        return repository.findAll();
+        return userRepository.findAll();
     }
 
     /**
@@ -41,7 +159,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public Optional<User> getById(Long id) {
         log.info("Fetching User with ID: {}", id);
-        return repository.findById(id);
+        return userRepository.findById(id);
     }
 
     /**
@@ -49,7 +167,7 @@ public class UserService {
      */
     public User create(User entity) {
         log.info("Creating new User");
-        return repository.save(entity);
+        return userRepository.save(entity);
     }
 
     /**
@@ -58,7 +176,7 @@ public class UserService {
     public User update(Long id, User entity) {
         log.info("Updating User with ID: {}", id);
         entity.setId(id);
-        return repository.save(entity);
+        return userRepository.save(entity);
     }
 
     /**
@@ -66,6 +184,6 @@ public class UserService {
      */
     public void delete(Long id) {
         log.info("Deleting User with ID: {}", id);
-        repository.deleteById(id);
+        userRepository.deleteById(id);
     }
 }

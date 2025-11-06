@@ -27,6 +27,9 @@ public class CreateOrderCommand {
 
     private String commandId;  // For idempotency
     private String customerId;
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
     private List<OrderItemDTO> items;
     private DeliveryAddressDTO deliveryAddress;
     private String deliveryType;  // EXPRESS, STANDARD
@@ -39,6 +42,7 @@ public class CreateOrderCommand {
     @AllArgsConstructor
     public static class OrderItemDTO {
         private String sku;
+        private String productName;
         private Integer quantity;
         private BigDecimal unitPrice;
     }

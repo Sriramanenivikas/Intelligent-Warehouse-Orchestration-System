@@ -4,7 +4,8 @@ import com.iwos.entity.InventoryTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * InventoryTransaction Repository
@@ -13,6 +14,23 @@ import java.util.Optional;
 @Repository
 public interface InventoryTransactionRepository extends JpaRepository<InventoryTransaction, Long> {
 
-    // Add custom query methods here
-    // Example: Optional<InventoryTransaction> findByName(String name);
+    /**
+     * Find all transactions for an inventory item
+     */
+    List<InventoryTransaction> findByInventoryId(Long inventoryId);
+
+    /**
+     * Find transactions by reference (e.g., order ID)
+     */
+    List<InventoryTransaction> findByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
+
+    /**
+     * Find transactions by type
+     */
+    List<InventoryTransaction> findByTransactionType(String transactionType);
+
+    /**
+     * Find transactions for an inventory item ordered by ID descending
+     */
+    List<InventoryTransaction> findByInventoryIdOrderByIdDesc(Long inventoryId);
 }

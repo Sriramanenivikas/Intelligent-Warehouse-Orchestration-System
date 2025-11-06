@@ -1,14 +1,21 @@
 package com.iwos.service;
 
+import com.iwos.dto.*;
 import com.iwos.entity.Inventory;
+import com.iwos.entity.InventoryTransaction;
+import com.iwos.entity.SKU;
 import com.iwos.repository.InventoryRepository;
+import com.iwos.repository.SKURepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Inventory Service
@@ -24,48 +31,305 @@ import java.util.Optional;
 @Transactional
 public class InventoryService {
 
-    private final InventoryRepository repository;
+    private final InventoryRepository inventoryRepository;
+    private final SKURepository skuRepository;
+    private final InventoryTransactionService transactionService;
 
     /**
-     * Get all Inventorys
+     * Add inventory for a SKU in a warehouse
+     */
+    public InventoryResponse addInventory(AddInventoryRequest request) {
+        log.info("Adding inventory: SKU {} at Warehouse {}, Quantity: {}",
+                 request.getSkuId(), request.getWarehouseId(), request.getQuantity());
+
+        // Validate SKU exists
+        SKU sku = skuRepository.findById(request.getSkuId())
+                .orElseThrow(() -> new RuntimeException("SKU not found: " + request.getSkuId()));
+
+        // Find or create inventory record
+        Inventory inventory = inventoryRepository
+                .findByWarehouseIdAndSkuId(request.getWarehouseId(), request.getSkuId())
+                .orElse(Inventory.builder()
+                        .skuId(request.getSkuId())
+                        .warehouseId(request.getWarehouseId())
+                        .quantityOnHand(0)
+                        .quantityReserved(0)
+                        .build());
+
+        // Update quantity
+        Integer previousQuantity = inventory.getQuantityOnHand();
+        inventory.setQuantityOnHand(previousQuantity + request.getQuantity());
+        inventory.setLastCountedAt(LocalDateTime.now());
+
+        // Save inventory
+        Inventory savedInventory = inventoryRepository.save(inventory);
+
+        // Create transaction record
+        InventoryTransaction transaction = InventoryTransaction.builder()
+                .inventoryId(savedInventory.getId())
+                .transactionType("ADD")
+                .quantity(request.getQuantity())
+                .quantityBefore(previousQuantity)
+                .quantityAfter(savedInventory.getQuantityOnHand())
+                .referenceType("MANUAL_ADJUSTMENT")
+                .notes(request.getNotes())
+                .build();
+        transactionService.create(transaction);
+
+        log.info("Inventory added successfully: {} units", request.getQuantity());
+
+        return buildInventoryResponse(savedInventory, sku);
+    }
+
+    /**
+     * Get inventory level for specific warehouse and SKU
      */
     @Transactional(readOnly = true)
-    public List<Inventory> getAll() {
-        log.info("Fetching all Inventorys");
-        return repository.findAll();
+    public InventoryLevelResponse getInventoryLevel(Long warehouseId, Long skuId) {
+        log.info("Getting inventory level: Warehouse {}, SKU {}", warehouseId, skuId);
+
+        Inventory inventory = inventoryRepository
+                .findByWarehouseIdAndSkuId(warehouseId, skuId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Inventory not found for warehouse " + warehouseId + " and SKU " + skuId));
+
+        SKU sku = skuRepository.findById(skuId)
+                .orElseThrow(() -> new RuntimeException("SKU not found: " + skuId));
+
+        return buildInventoryLevelResponse(inventory, sku);
     }
 
     /**
-     * Get Inventory by ID
+     * Reserve inventory for an order
+     */
+    public ReservationResponse reserveInventory(ReserveInventoryRequest request) {
+        log.info("Reserving inventory for Order {}", request.getOrderId());
+
+        List<ReservationResponse.ReservedItem> reservedItems = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        for (ReserveInventoryRequest.ReservationItem item : request.getItems()) {
+            try {
+                // Find inventory
+                Inventory inventory = inventoryRepository
+                        .findByWarehouseIdAndSkuId(request.getWarehouseId(), item.getSkuId())
+                        .orElseThrow(() -> new RuntimeException(
+                                "Inventory not found for SKU " + item.getSkuId()));
+
+                // Get SKU details
+                SKU sku = skuRepository.findById(item.getSkuId())
+                        .orElseThrow(() -> new RuntimeException("SKU not found: " + item.getSkuId()));
+
+                // Check available quantity
+                Integer available = inventory.getQuantityOnHand() - inventory.getQuantityReserved();
+                if (available < item.getQuantity()) {
+                    String error = String.format("Insufficient inventory for SKU %s: requested %d, available %d",
+                            sku.getSkuCode(), item.getQuantity(), available);
+                    errors.add(error);
+                    log.warn(error);
+                    continue;
+                }
+
+                // Reserve inventory
+                Integer previousReserved = inventory.getQuantityReserved();
+                inventory.setQuantityReserved(previousReserved + item.getQuantity());
+                inventoryRepository.save(inventory);
+
+                // Create transaction record
+                InventoryTransaction transaction = InventoryTransaction.builder()
+                        .inventoryId(inventory.getId())
+                        .transactionType("RESERVE")
+                        .quantity(item.getQuantity())
+                        .quantityBefore(previousReserved)
+                        .quantityAfter(inventory.getQuantityReserved())
+                        .referenceType("ORDER")
+                        .referenceId(request.getOrderId())
+                        .notes("Reserved for order " + request.getOrderId())
+                        .build();
+                transactionService.create(transaction);
+
+                // Add to reserved items
+                reservedItems.add(ReservationResponse.ReservedItem.builder()
+                        .skuId(item.getSkuId())
+                        .skuCode(sku.getSkuCode())
+                        .quantityReserved(item.getQuantity())
+                        .quantityAvailable(inventory.getQuantityOnHand() - inventory.getQuantityReserved())
+                        .build());
+
+                log.info("Reserved {} units of SKU {} for order {}",
+                         item.getQuantity(), sku.getSkuCode(), request.getOrderId());
+
+            } catch (Exception e) {
+                errors.add("Error reserving SKU " + item.getSkuId() + ": " + e.getMessage());
+                log.error("Error reserving inventory for SKU {}", item.getSkuId(), e);
+            }
+        }
+
+        boolean success = errors.isEmpty();
+        String message = success ? "Inventory reserved successfully" : "Partial reservation completed with errors";
+
+        return ReservationResponse.builder()
+                .success(success)
+                .message(message)
+                .orderId(request.getOrderId())
+                .reservedItems(reservedItems)
+                .errors(errors.isEmpty() ? null : errors)
+                .build();
+    }
+
+    /**
+     * Release reserved inventory
+     */
+    public ReservationResponse releaseInventory(ReleaseInventoryRequest request) {
+        log.info("Releasing reserved inventory for Order {}", request.getOrderId());
+
+        List<ReservationResponse.ReservedItem> releasedItems = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        for (ReleaseInventoryRequest.ReleaseItem item : request.getItems()) {
+            try {
+                // Find inventory
+                Inventory inventory = inventoryRepository
+                        .findByWarehouseIdAndSkuId(request.getWarehouseId(), item.getSkuId())
+                        .orElseThrow(() -> new RuntimeException(
+                                "Inventory not found for SKU " + item.getSkuId()));
+
+                // Get SKU details
+                SKU sku = skuRepository.findById(item.getSkuId())
+                        .orElseThrow(() -> new RuntimeException("SKU not found: " + item.getSkuId()));
+
+                // Check if enough reserved quantity
+                if (inventory.getQuantityReserved() < item.getQuantity()) {
+                    String error = String.format("Cannot release %d units of SKU %s: only %d reserved",
+                            item.getQuantity(), sku.getSkuCode(), inventory.getQuantityReserved());
+                    errors.add(error);
+                    log.warn(error);
+                    continue;
+                }
+
+                // Release inventory
+                Integer previousReserved = inventory.getQuantityReserved();
+                inventory.setQuantityReserved(previousReserved - item.getQuantity());
+                inventoryRepository.save(inventory);
+
+                // Create transaction record
+                InventoryTransaction transaction = InventoryTransaction.builder()
+                        .inventoryId(inventory.getId())
+                        .transactionType("RELEASE")
+                        .quantity(item.getQuantity())
+                        .quantityBefore(previousReserved)
+                        .quantityAfter(inventory.getQuantityReserved())
+                        .referenceType("ORDER")
+                        .referenceId(request.getOrderId())
+                        .notes("Released for order " + request.getOrderId() +
+                               (request.getReason() != null ? " - Reason: " + request.getReason() : ""))
+                        .build();
+                transactionService.create(transaction);
+
+                // Add to released items
+                releasedItems.add(ReservationResponse.ReservedItem.builder()
+                        .skuId(item.getSkuId())
+                        .skuCode(sku.getSkuCode())
+                        .quantityReserved(item.getQuantity())
+                        .quantityAvailable(inventory.getQuantityOnHand() - inventory.getQuantityReserved())
+                        .build());
+
+                log.info("Released {} units of SKU {} for order {}",
+                         item.getQuantity(), sku.getSkuCode(), request.getOrderId());
+
+            } catch (Exception e) {
+                errors.add("Error releasing SKU " + item.getSkuId() + ": " + e.getMessage());
+                log.error("Error releasing inventory for SKU {}", item.getSkuId(), e);
+            }
+        }
+
+        boolean success = errors.isEmpty();
+        String message = success ? "Inventory released successfully" : "Partial release completed with errors";
+
+        return ReservationResponse.builder()
+                .success(success)
+                .message(message)
+                .orderId(request.getOrderId())
+                .reservedItems(releasedItems)
+                .errors(errors.isEmpty() ? null : errors)
+                .build();
+    }
+
+    /**
+     * Get all inventory for a warehouse
      */
     @Transactional(readOnly = true)
-    public Optional<Inventory> getById(Long id) {
-        log.info("Fetching Inventory with ID: {}", id);
-        return repository.findById(id);
+    public List<InventoryResponse> getWarehouseInventory(Long warehouseId) {
+        log.info("Getting all inventory for warehouse {}", warehouseId);
+
+        List<Inventory> inventoryList = inventoryRepository.findByWarehouseId(warehouseId);
+
+        return inventoryList.stream()
+                .map(inventory -> {
+                    SKU sku = skuRepository.findById(inventory.getSkuId())
+                            .orElse(null);
+                    return buildInventoryResponse(inventory, sku);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
-     * Create Inventory
+     * Get low stock items
      */
-    public Inventory create(Inventory entity) {
-        log.info("Creating new Inventory");
-        return repository.save(entity);
+    @Transactional(readOnly = true)
+    public List<InventoryLevelResponse> getLowStockItems(Long warehouseId) {
+        log.info("Getting low stock items for warehouse {}", warehouseId);
+
+        List<Inventory> lowStockInventory = warehouseId != null
+                ? inventoryRepository.findLowStockItemsByWarehouse(warehouseId)
+                : inventoryRepository.findLowStockItems();
+
+        return lowStockInventory.stream()
+                .map(inventory -> {
+                    SKU sku = skuRepository.findById(inventory.getSkuId())
+                            .orElse(null);
+                    return buildInventoryLevelResponse(inventory, sku);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
-     * Update Inventory
+     * Build InventoryResponse from Inventory and SKU
      */
-    public Inventory update(Long id, Inventory entity) {
-        log.info("Updating Inventory with ID: {}", id);
-        entity.setId(id);
-        return repository.save(entity);
+    private InventoryResponse buildInventoryResponse(Inventory inventory, SKU sku) {
+        return InventoryResponse.builder()
+                .id(inventory.getId())
+                .skuId(inventory.getSkuId())
+                .skuCode(sku != null ? sku.getSkuCode() : null)
+                .skuName(sku != null ? sku.getName() : null)
+                .warehouseId(inventory.getWarehouseId())
+                .quantityOnHand(inventory.getQuantityOnHand())
+                .quantityReserved(inventory.getQuantityReserved())
+                .quantityAvailable(inventory.getQuantityOnHand() - inventory.getQuantityReserved())
+                .lastCountedAt(inventory.getLastCountedAt())
+                .build();
     }
 
     /**
-     * Delete Inventory
+     * Build InventoryLevelResponse from Inventory and SKU
      */
-    public void delete(Long id) {
-        log.info("Deleting Inventory with ID: {}", id);
-        repository.deleteById(id);
+    private InventoryLevelResponse buildInventoryLevelResponse(Inventory inventory, SKU sku) {
+        Integer available = inventory.getQuantityOnHand() - inventory.getQuantityReserved();
+        Integer reorderPoint = sku != null ? sku.getReorderPoint() : 0;
+        Boolean needsReorder = reorderPoint != null && available < reorderPoint;
+
+        return InventoryLevelResponse.builder()
+                .inventoryId(inventory.getId())
+                .skuId(inventory.getSkuId())
+                .skuCode(sku != null ? sku.getSkuCode() : null)
+                .skuName(sku != null ? sku.getName() : null)
+                .warehouseId(inventory.getWarehouseId())
+                .quantityOnHand(inventory.getQuantityOnHand())
+                .quantityReserved(inventory.getQuantityReserved())
+                .quantityAvailable(available)
+                .reorderPoint(reorderPoint)
+                .needsReorder(needsReorder)
+                .lastCountedAt(inventory.getLastCountedAt())
+                .build();
     }
 }
