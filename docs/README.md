@@ -11,6 +11,8 @@ Use this order:
 5. `engineering/engineering-handbook.md`
 6. `engineering/repo-skeleton.md`
 7. `devops/deployment-topology.md`
-8. `api/api-governance.md`
+8. `devops/github-team-operating-model.md`
+9. `devops/github-repository-setup.md`
+10. `api/api-governance.md`
 
 This docs set is the canonical source of truth for the production-style system we are planning.

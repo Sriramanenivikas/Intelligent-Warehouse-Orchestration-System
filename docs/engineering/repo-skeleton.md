@@ -46,7 +46,6 @@ IWOS/
     network/
     intelligence/
   deploy/
-    argocd/
     helm/
     envs/
   infra/
@@ -125,7 +124,7 @@ IWOS/
 
 - `Kong Gateway`
 - shared Java libraries in `platform/shared-java`
-- CI/CD, GitOps, Terraform, and environment manifests outside the business-service layer
+- CI/CD, GitHub environment controls, Terraform, and environment manifests outside the business-service layer
 
 ## 6. Why This Shape
 
@@ -200,7 +199,7 @@ src/main/java/com/iwos/<service>/
 
 ## 10. Related Canonical Docs
 
-- [Project Context](project-context.md)
+- [Project Context](../architecture/project-context.md)
 - [Engineering Handbook](engineering-handbook.md)
-- [Unified Fulfillment Platform](hld/unified-fulfillment-platform.md)
-- [Production Architecture Decision Record](hld/production-architecture-decisions.md)
+- [Unified Fulfillment Platform](../architecture/unified-fulfillment-platform.md)
+- [Production Architecture Decision Record](../decisions/production-architecture-decisions.md)

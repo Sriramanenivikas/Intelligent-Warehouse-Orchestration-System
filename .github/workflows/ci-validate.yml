@@ -2,8 +2,16 @@ name: Repo Validate
 
 on:
   pull_request:
+    branches: [main, develop]
   push:
     branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repo-validate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:

@@ -177,8 +177,8 @@ The codebase contains useful domain material, but it should not be mistaken for 
 
 The canonical future design is defined by:
 
-- [Unified Fulfillment Platform](hld/unified-fulfillment-platform.md)
-- [Production Architecture Decision Record](hld/production-architecture-decisions.md)
+- [Unified Fulfillment Platform](unified-fulfillment-platform.md)
+- [Production Architecture Decision Record](../decisions/production-architecture-decisions.md)
 - [Repo Restructure Plan](repo-restructure-plan.md)
 
 ## 9. In Scope For The New Architecture
@@ -218,7 +218,7 @@ The architecture should be judged successful if it can support:
 
 Read these next:
 
-1. [Engineering Handbook](engineering-handbook.md)
+1. [Engineering Handbook](../engineering/engineering-handbook.md)
 2. [Repo Restructure Plan](repo-restructure-plan.md)
-3. [Unified Fulfillment Platform](hld/unified-fulfillment-platform.md)
-4. [Production Architecture Decision Record](hld/production-architecture-decisions.md)
+3. [Unified Fulfillment Platform](unified-fulfillment-platform.md)
+4. [Production Architecture Decision Record](../decisions/production-architecture-decisions.md)

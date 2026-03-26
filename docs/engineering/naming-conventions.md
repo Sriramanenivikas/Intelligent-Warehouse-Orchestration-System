@@ -8,5 +8,6 @@ Use these defaults:
 - database schemas: `snake_case`
 - tables: `snake_case`
 - event versions: explicit `v1`, `v2`, ...
-- Argo CD applications: `iwos-<env>-<group>`
+- Git branches: `<type>/<short-name>`
+- release tags: `v<major>.<minor>.<patch>`
 - Terraform modules: one infrastructure capability per module

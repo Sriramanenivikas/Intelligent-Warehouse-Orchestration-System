@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose planned work for the platform, services, or developer workflow.
+title: "feat(scope): "
+labels:
+  - enhancement
+  - triage
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are we solving?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the proposed solution.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Boundaries
+      description: Which domains, services, or platform areas are affected?
+    validations:
+      required: true

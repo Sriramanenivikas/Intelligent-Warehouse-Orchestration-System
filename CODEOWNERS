@@ -1,11 +1,15 @@
-* @iwos/platform
+# Personal-repo-safe CODEOWNERS.
+# When this repository moves to a GitHub organization, replace these usernames
+# with real GitHub teams such as @org/platform or @org/fulfillment.
 
-/docs/ @iwos/architecture
-/platform/ @iwos/platform
-/services/commerce/ @iwos/commerce
-/services/fulfillment/ @iwos/fulfillment
-/services/network/ @iwos/network
-/services/intelligence/ @iwos/intelligence
-/deploy/ @iwos/platform
-/infra/ @iwos/platform
-/contracts/ @iwos/architecture
+* @Sriramanenivikas
+
+/docs/ @Sriramanenivikas
+/platform/ @Sriramanenivikas
+/services/commerce/ @Sriramanenivikas
+/services/fulfillment/ @Sriramanenivikas
+/services/network/ @Sriramanenivikas
+/services/intelligence/ @Sriramanenivikas
+/deploy/ @Sriramanenivikas
+/infra/ @Sriramanenivikas
+/contracts/ @Sriramanenivikas

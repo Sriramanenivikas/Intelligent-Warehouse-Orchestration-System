@@ -27,8 +27,8 @@ The right abstraction is:
 
 If documents conflict, trust them in this order:
 
-1. [Production Architecture Decision Record](hld/production-architecture-decisions.md)
-2. [Unified Fulfillment Platform](hld/unified-fulfillment-platform.md)
+1. [Production Architecture Decision Record](../decisions/production-architecture-decisions.md)
+2. [Unified Fulfillment Platform](../architecture/unified-fulfillment-platform.md)
 3. [Repo Restructure Plan](repo-restructure-plan.md)
 4. legacy HLD and LLD docs
 
@@ -214,7 +214,7 @@ Legacy docs are not sufficient when:
 
 ## 12. Immediate Next-Level References
 
-- [Project Context](project-context.md)
+- [Project Context](../architecture/project-context.md)
 - [Repo Restructure Plan](repo-restructure-plan.md)
-- [Unified Fulfillment Platform](hld/unified-fulfillment-platform.md)
-- [Production Architecture Decision Record](hld/production-architecture-decisions.md)
+- [Unified Fulfillment Platform](../architecture/unified-fulfillment-platform.md)
+- [Production Architecture Decision Record](../decisions/production-architecture-decisions.md)

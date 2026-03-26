@@ -10,6 +10,7 @@ Target runtime model:
 - `DynamoDB` for append-heavy online state and timelines
 - `S3` for data lake and model training inputs
 - `Kong` at the north-south edge
-- `Argo CD` for GitOps-based deployment
+- `GitHub Actions + GitHub Environments` for repository-native CI/CD control
+- `Helm` as the deployment packaging unit
 
 This repo contains structure only. Environment-specific runtime configuration should be added later under `deploy/` and `infra/`.

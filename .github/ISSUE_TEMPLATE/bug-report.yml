@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a defect in repo structure, docs, workflows, or platform scaffolding.
+title: "fix(scope): "
+labels:
+  - bug
+  - triage
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What is blocked or degraded?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction
+      description: Steps, commands, or files involved.
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Branch or ref
+      placeholder: develop

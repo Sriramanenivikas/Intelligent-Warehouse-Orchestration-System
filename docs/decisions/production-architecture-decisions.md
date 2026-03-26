@@ -2,7 +2,7 @@
 
 Decision-driven production architecture for the new fulfillment platform.
 
-This document supplements [unified-fulfillment-platform.md](/Users/vikas/Documents/capstone/IWOS/docs/hld/unified-fulfillment-platform.md) with:
+This document supplements [unified-fulfillment-platform.md](/Users/vikas/Documents/capstone/IWOS/docs/architecture/unified-fulfillment-platform.md) with:
 
 - architectural decisions
 - rejected alternatives
@@ -77,7 +77,7 @@ It is an integrated `commerce + fulfillment + network + planning` platform.
 | ADR-005 | High-volume event/timeline store | DynamoDB for scan/timeline/online features | PostgreSQL for all high-write logs | better scale for append-heavy key-value access |
 | ADR-006 | Event backbone | MSK / Kafka | direct RPC choreography, SQS-only | replay, fan-out, ordered partitions, backpressure |
 | ADR-007 | Compute platform | EKS + managed node groups + Karpenter | self-managed K8s, ECS-only, all-Fargate | balances control, ecosystem, and autoscaling |
-| ADR-008 | Delivery model | GitOps with Argo CD | imperative kubectl or manual Helm only | auditability, drift detection, rollback, multi-cluster |
+| ADR-008 | Delivery model | GitHub Actions + GitHub Environments + Helm | Argo CD for the current repo phase, or imperative kubectl/manual Helm only | simpler team workflow now, with clear promotion gates and lower operational overhead |
 | ADR-009 | API idempotency | caller-provided idempotency key / client token | request hashing only | hashing fails when equal requests can mean different intent |
 | ADR-010 | Retry behavior | bounded retry + backoff + jitter | aggressive retries without control | avoids overload amplification |
 | ADR-011 | Fallback strategy | fail fast, degrade explicitly, no hidden fallback to primary DB | cache-bypass or direct-DB fallback paths | prevents bimodal behavior and outage amplification |
@@ -322,7 +322,7 @@ Karpenter is recommended for workloads with changing capacity needs and simplifi
 
 ECS is a valid production platform, but this workload benefits from:
 
-- GitOps-native workflows
+- GitHub-native workflows
 - richer K8s ecosystem
 - Karpenter
 - service mesh optionality
@@ -330,39 +330,41 @@ ECS is a valid production platform, but this workload benefits from:
 
 For this platform, EKS is the stronger long-term fit.
 
-### ADR-008: Argo CD GitOps
+### ADR-008: GitHub Actions And GitHub Environments
 
 #### Decision
 
-Use GitOps with Argo CD for deployment and drift management.
+Use GitHub Actions for CI and promotion orchestration, GitHub Environments for approval gates, and Helm as the deployment packaging unit.
 
 #### Why
 
-AWS Prescriptive Guidance describes Argo CD as:
+GitHub Environments provide deployment protection rules, required reviewers, and environment-scoped secrets. GitHub recommends them for deployment targets and approval control. [R18]
 
-- declarative
-- Git as source of truth
-- drift-detecting
-- self-healing
-- rollback-friendly
-- multi-cluster capable [R13]
+GitHub rulesets provide a stronger repository-native way to enforce branch protections and required checks consistently. [R19]
+
+For this repo phase, that is the right complexity level:
+
+- native to the repository
+- lower operational overhead than a separate deployment controller
+- easier for a 10-person team to adopt quickly
+- compatible with later AWS OIDC-based deployment flows
 
 #### Why Not Manual Helm / kubectl
 
 - poor auditability
-- poor drift visibility
 - rollback safety depends on humans
 - inconsistent environment promotion
+- weak approval controls
 
-#### Why Argo CD Over Flux
+#### Why Not Argo CD Yet
 
-Flux is also viable. Argo CD is chosen here because:
+Argo CD is valid at larger operational scale, but it is the wrong default for the current repo phase because:
 
-- stronger application-centric UI
-- easier rollout visibility
-- lower cognitive friction for mixed platform/application teams
+- it adds another always-on control plane
+- it increases setup and operational burden before real services exist
+- it creates a false sense of deployment maturity if the actual workloads are still scaffolding
 
-If the team strongly prefers CLI-centric workflows, Flux remains a credible alternative.
+If later phases require cluster-side reconciliation, drift detection, and multi-cluster promotion beyond what GitHub-native workflows can handle cleanly, Argo CD can be introduced then.
 
 ### ADR-009: Caller-Provided Idempotency Tokens
 
@@ -618,7 +620,7 @@ Each product team owns:
 Platform owns:
 
 - EKS base
-- GitOps
+- GitHub Actions and environment policy
 - shared observability
 - secrets and IAM patterns
 - golden templates
@@ -651,7 +653,7 @@ Every merge to main:
 - build immutable image
 - sign image
 - publish to ECR
-- update GitOps manifests
+- promote the approved release through GitHub Environments
 - deploy to dev
 - run integration tests
 
@@ -827,7 +829,7 @@ This is directly aligned with OWASP API concerns around resource consumption and
 - CloudTrail organization-wide
 - centralized log archive account
 - immutable audit logs
-- deployment audit trail from GitOps
+- deployment audit trail from GitHub Actions and environment approvals
 - security event routing to SIEM
 
 ### 9.5 Compliance Targets
@@ -977,7 +979,7 @@ The final recommended production system is:
 - `state-machine based`
 - `Aurora + DynamoDB + Redis + Kafka`
 - `EKS managed control plane`
-- `GitOps deployed`
+- `GitHub Actions managed`
 - `zero-trust aligned`
 - `compliance-scope minimized`
 - `AI-assisted, not AI-dependent`
@@ -989,7 +991,7 @@ This is the architecture we recommend building.
 These are the last decisions the team should confirm before implementation:
 
 1. Aurora PostgreSQL vs Aurora PostgreSQL + selective DynamoDB reservations for specific ultra-hot inventory partitions
-2. Argo CD vs Flux if the platform team prefers CLI-only workflows
+2. GitHub-native deployment control vs a future dedicated GitOps controller if cluster complexity grows
 3. selective service mesh vs broader mesh adoption in core namespaces
 4. exact payment-provider model and PCI scope boundary
 5. regional topology for initial rollout and DR target
@@ -998,7 +1000,7 @@ These are the last decisions the team should confirm before implementation:
 
 1. landing zone and account structure
 2. EKS platform baseline
-3. GitOps and CI/CD
+3. GitHub Actions, environments, and CI/CD
 4. order-intake and order-state
 5. payment and inventory ledger
 6. warehouse orchestration and task execution
@@ -1059,9 +1061,6 @@ https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems
 `[R12]` Amazon Builders’ Library: Ensuring rollback safety during deployments  
 https://aws.amazon.com/builders-library/ensuring-rollback-safety-during-deployments/
 
-`[R13]` AWS Prescriptive Guidance: Argo CD for EKS GitOps  
-https://docs.aws.amazon.com/prescriptive-guidance/latest/eks-gitops-tools/argo-cd.html
-
 `[R14]` AWS Control Tower: AWS multi-account strategy  
 https://docs.aws.amazon.com/controltower/latest/userguide/aws-multi-account-landing-zone.html
 
@@ -1073,6 +1072,12 @@ https://csrc.nist.gov/pubs/sp/800/207/final
 
 `[R17]` OWASP API Security Top 10  
 https://owasp.org/API-Security/
+
+`[R18]` GitHub Docs: Using environments for deployment  
+https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+
+`[R19]` GitHub Docs: About rulesets  
+https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets
 
 `[R18]` AWS PCI FAQs  
 https://aws.amazon.com/compliance/pci-faqs/

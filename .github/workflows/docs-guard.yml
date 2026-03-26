@@ -2,6 +2,14 @@ name: Docs Guard
 
 on:
   pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-guard-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   docs-check:

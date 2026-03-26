@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project documentation
+    url: https://github.com/Sriramanenivikas/Intelligent-Warehouse-Orchestration-System/tree/main/docs
+    about: Read the canonical architecture and engineering documents before opening an issue.

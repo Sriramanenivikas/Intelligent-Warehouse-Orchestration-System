@@ -1,3 +1,3 @@
 # Environment: perf
 
-Environment-specific GitOps manifests and overrides belong here.
+Environment-specific deployment notes, release metadata, and overrides for the `perf` GitHub Environment belong here.
