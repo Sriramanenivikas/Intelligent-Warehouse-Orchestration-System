@@ -1,0 +1,2 @@
+-- Initial baseline migration placeholder.
+-- Replace this file with service-owned schema definitions during implementation.

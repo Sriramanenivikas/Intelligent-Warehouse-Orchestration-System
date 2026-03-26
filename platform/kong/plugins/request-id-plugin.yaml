@@ -1,0 +1,8 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: iwos-request-id
+plugin: correlation-id
+config:
+  header_name: x-request-id
+  generator: uuid

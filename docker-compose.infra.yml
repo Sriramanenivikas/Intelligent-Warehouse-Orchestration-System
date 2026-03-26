@@ -1,52 +1,33 @@
-version: '3.9'
-
-# Observability stack - run alongside main docker-compose.yml
-# Usage: docker compose -f docker-compose.yml -f docker-compose.infra.yml up
+version: "3.9"
 
 services:
-  # ==================== METRICS ====================
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: iwos-prometheus
     ports:
       - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
     volumes:
       - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.retention.time=7d'
 
   grafana:
     image: grafana/grafana:11.3.0
     container_name: iwos-grafana
-    ports:
-      - "3000:3000"
+    depends_on:
+      - prometheus
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: iwos_admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
+    ports:
+      - "3000:3000"
 
-  # ==================== TRACING ====================
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     container_name: iwos-jaeger
-    ports:
-      - "16686:16686"    # Jaeger UI
-      - "14268:14268"    # HTTP collector
-      - "4317:4317"      # OTLP gRPC
-      - "4318:4318"      # OTLP HTTP
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
-
-volumes:
-  prometheus_data:
-  grafana_data:
-
-networks:
-  default:
-    name: iwos-network
-    external: true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"

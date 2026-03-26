@@ -1,0 +1,6 @@
+apiVersion: v2
+name: service-template
+version: 0.1.0
+appVersion: "0.1.0"
+type: application
+description: Shared Helm template skeleton for IWOS services

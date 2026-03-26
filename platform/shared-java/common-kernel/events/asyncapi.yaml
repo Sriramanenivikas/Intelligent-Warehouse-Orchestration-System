@@ -1,0 +1,6 @@
+asyncapi: 3.0.0
+info:
+  title: common-kernel Events
+  version: 0.1.0
+  description: Planning skeleton only. No topics or channels implemented yet.
+channels: {}

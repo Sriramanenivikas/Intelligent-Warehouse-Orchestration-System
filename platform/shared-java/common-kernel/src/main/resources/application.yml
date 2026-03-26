@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: common-kernel
+
+server:
+  port: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

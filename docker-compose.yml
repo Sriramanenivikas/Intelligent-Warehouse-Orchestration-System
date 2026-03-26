@@ -1,149 +1,81 @@
-version: '3.9'
+version: "3.9"
 
 services:
-  # ==================== DATABASES ====================
   postgres:
     image: postgres:16-alpine
     container_name: iwos-postgres
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: iwos
       POSTGRES_PASSWORD: iwos_secret
-      POSTGRES_MULTIPLE_DATABASES: iwos_auth,iwos_orders,iwos_payments,iwos_inventory,iwos_wms,iwos_pickpack,iwos_dispatch,iwos_pricing,iwos_notifications
+      POSTGRES_DB: iwos
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U iwos"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  mongodb:
-    image: mongo:7.0
-    container_name: iwos-mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: iwos
-      MONGO_INITDB_ROOT_PASSWORD: iwos_secret
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ==================== CACHING ====================
   redis:
     image: redis:7-alpine
     container_name: iwos-redis
+    command: redis-server --requirepass iwos_secret
     ports:
       - "6379:6379"
-    command: redis-server --requirepass iwos_secret --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "iwos_secret", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  # ==================== MESSAGING ====================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.7.0
     container_name: iwos-zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.7.0
     container_name: iwos-kafka
-    ports:
-      - "9092:9092"
-      - "29092:29092"
+    depends_on:
+      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    depends_on:
-      - zookeeper
-    healthcheck:
-      test: kafka-broker-api-versions --bootstrap-server localhost:9092
-      interval: 15s
-      timeout: 10s
-      retries: 5
+    ports:
+      - "9092:9092"
+      - "29092:29092"
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.7.0
     container_name: iwos-schema-registry
-    ports:
-      - "8081:8081"
+    depends_on:
+      - kafka
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
-    depends_on:
-      - kafka
+    ports:
+      - "8081:8081"
 
-  # ==================== SEARCH ====================
   opensearch:
     image: opensearchproject/opensearch:2.17.0
     container_name: iwos-opensearch
-    ports:
-      - "9200:9200"
     environment:
       discovery.type: single-node
       plugins.security.disabled: "true"
       OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
     volumes:
       - opensearch_data:/usr/share/opensearch/data
 
-  # ==================== LOCAL DynamoDB ====================
   dynamodb-local:
     image: amazon/dynamodb-local:2.5.3
     container_name: iwos-dynamodb
+    command: "-jar DynamoDBLocal.jar -sharedDb"
     ports:
       - "8000:8000"
-    command: "-jar DynamoDBLocal.jar -sharedDb"
-
-  # ==================== TEMPORAL ====================
-  temporal:
-    image: temporalio/auto-setup:1.25.2
-    container_name: iwos-temporal
-    ports:
-      - "7233:7233"
-    environment:
-      DB: postgresql
-      DB_PORT: 5432
-      POSTGRES_USER: iwos
-      POSTGRES_PWD: iwos_secret
-      POSTGRES_SEEDS: postgres
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  temporal-ui:
-    image: temporalio/ui:2.32.0
-    container_name: iwos-temporal-ui
-    ports:
-      - "8233:8080"
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
 
 volumes:
   postgres_data:
-  mongodb_data:
   redis_data:
   opensearch_data:
-
-networks:
-  default:
-    name: iwos-network

@@ -4,308 +4,48 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.4</version>
-        <relativePath/>
-    </parent>
-
     <groupId>com.iwos</groupId>
     <artifactId>iwos-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>IWOS - Indian Warehouse &amp; Order System</name>
-    <description>Production-grade microservices platform for warehouse and order management</description>
+    <name>iwos-parent</name>
+    <description>Planning skeleton for the unified fulfillment platform</description>
 
-    <!-- ==================== MODULES ==================== -->
-    <modules>
-        <!-- Foundation -->
-        <module>iwos-common</module>
-        <module>iwos-config-server</module>
-        <module>iwos-discovery-server</module>
-        <module>iwos-api-gateway</module>
-
-        <!-- Identity -->
-        <module>iwos-auth-service</module>
-
-        <!-- Core Services -->
-        <module>iwos-order-service</module>
-        <module>iwos-cart-service</module>
-        <module>iwos-payment-service</module>
-
-        <!-- Supply Chain -->
-        <module>iwos-inventory-service</module>
-        <module>iwos-wms-service</module>
-        <module>iwos-pick-pack-service</module>
-
-        <!-- Delivery -->
-        <module>iwos-dispatch-service</module>
-        <module>iwos-route-optimizer-service</module>
-        <module>iwos-tracking-service</module>
-
-        <!-- Intelligence / AI -->
-        <module>iwos-stock-predictor-service</module>
-        <module>iwos-recommendation-service</module>
-        <module>iwos-pricing-service</module>
-        <module>iwos-fraud-detection-service</module>
-
-        <!-- Cross-cutting -->
-        <module>iwos-notification-service</module>
-
-        <!-- Marketplace -->
-        <module>iwos-catalog-service</module>
-        <module>iwos-search-service</module>
-        <module>iwos-seller-service</module>
-        <module>iwos-review-service</module>
-
-        <!-- Returns -->
-        <module>iwos-returns-service</module>
-
-        <!-- Quick Commerce (Blinkit) -->
-        <module>iwos-darkstore-service</module>
-        <module>iwos-serviceability-service</module>
-    </modules>
-
-    <!-- ==================== VERSION PROPERTIES ==================== -->
     <properties>
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- Spring Cloud -->
-        <spring-cloud.version>2024.0.1</spring-cloud.version>
-
-        <!-- Database -->
-        <postgresql.version>42.7.5</postgresql.version>
-        <flyway.version>10.22.0</flyway.version>
-        <mongodb-driver.version>5.3.1</mongodb-driver.version>
-
-        <!-- Messaging -->
-        <spring-kafka.version>3.3.4</spring-kafka.version>
-        <avro.version>1.12.0</avro.version>
-
-        <!-- Security -->
-        <jjwt.version>0.12.6</jjwt.version>
-
-        <!-- Mapping & Utils -->
-        <mapstruct.version>1.6.3</mapstruct.version>
-        <lombok.version>1.18.36</lombok.version>
-
-        <!-- Observability -->
-        <micrometer.version>1.14.5</micrometer.version>
-        <opentelemetry.version>1.46.0</opentelemetry.version>
-
-        <!-- API Docs -->
-        <springdoc.version>2.8.4</springdoc.version>
-
-        <!-- Testing -->
-        <testcontainers.version>1.20.6</testcontainers.version>
-        <wiremock.version>3.12.1</wiremock.version>
-
-        <!-- Temporal -->
-        <temporal.version>1.27.0</temporal.version>
-
-        <!-- AWS SDK -->
-        <aws-sdk.version>2.29.52</aws-sdk.version>
-
-        <!-- Docker -->
-        <docker.image.prefix>iwos</docker.image.prefix>
-
-        <!-- IWOS Common Version -->
-        <iwos-common.version>${project.version}</iwos-common.version>
     </properties>
 
-    <!-- ==================== DEPENDENCY MANAGEMENT ==================== -->
-    <dependencyManagement>
-        <dependencies>
-            <!-- Spring Cloud BOM -->
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+    <modules>
+        <module>platform/shared-java/common-kernel</module>
+        <module>platform/shared-java/observability-starter</module>
+        <module>platform/shared-java/kafka-starter</module>
+        <module>platform/shared-java/service-testkit</module>
 
-            <!-- AWS SDK BOM -->
-            <dependency>
-                <groupId>software.amazon.awssdk</groupId>
-                <artifactId>bom</artifactId>
-                <version>${aws-sdk.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+        <module>services/commerce/identity-service</module>
+        <module>services/commerce/catalog-service</module>
+        <module>services/commerce/search-service</module>
+        <module>services/commerce/pricing-service</module>
+        <module>services/commerce/cart-service</module>
+        <module>services/commerce/order-intake-service</module>
+        <module>services/commerce/order-orchestrator-service</module>
+        <module>services/commerce/promise-allocation-service</module>
+        <module>services/commerce/payment-service</module>
 
-            <!-- Testcontainers BOM -->
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+        <module>services/fulfillment/inventory-ledger-service</module>
+        <module>services/fulfillment/node-registry-service</module>
+        <module>services/fulfillment/warehouse-orchestrator-service</module>
+        <module>services/fulfillment/task-execution-service</module>
+        <module>services/fulfillment/returns-service</module>
 
-            <!-- IWOS Common -->
-            <dependency>
-                <groupId>com.iwos</groupId>
-                <artifactId>iwos-common</artifactId>
-                <version>${iwos-common.version}</version>
-            </dependency>
+        <module>services/network/shipment-network-service</module>
+        <module>services/network/scan-event-service</module>
+        <module>services/network/notification-service</module>
 
-            <!-- JWT -->
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-api</artifactId>
-                <version>${jjwt.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-impl</artifactId>
-                <version>${jjwt.version}</version>
-                <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.jsonwebtoken</groupId>
-                <artifactId>jjwt-jackson</artifactId>
-                <version>${jjwt.version}</version>
-                <scope>runtime</scope>
-            </dependency>
-
-            <!-- MapStruct -->
-            <dependency>
-                <groupId>org.mapstruct</groupId>
-                <artifactId>mapstruct</artifactId>
-                <version>${mapstruct.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.mapstruct</groupId>
-                <artifactId>mapstruct-processor</artifactId>
-                <version>${mapstruct.version}</version>
-                <scope>provided</scope>
-            </dependency>
-
-            <!-- SpringDoc OpenAPI -->
-            <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-                <version>${springdoc.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
-                <version>${springdoc.version}</version>
-            </dependency>
-
-            <!-- Temporal -->
-            <dependency>
-                <groupId>io.temporal</groupId>
-                <artifactId>temporal-sdk</artifactId>
-                <version>${temporal.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.temporal</groupId>
-                <artifactId>temporal-spring-boot-starter-alpha</artifactId>
-                <version>${temporal.version}</version>
-            </dependency>
-
-            <!-- Flyway -->
-            <dependency>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-core</artifactId>
-                <version>${flyway.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-database-postgresql</artifactId>
-                <version>${flyway.version}</version>
-            </dependency>
-
-            <!-- Avro -->
-            <dependency>
-                <groupId>org.apache.avro</groupId>
-                <artifactId>avro</artifactId>
-                <version>${avro.version}</version>
-            </dependency>
-
-            <!-- WireMock -->
-            <dependency>
-                <groupId>org.wiremock</groupId>
-                <artifactId>wiremock-standalone</artifactId>
-                <version>${wiremock.version}</version>
-                <scope>test</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <!-- ==================== COMMON DEPENDENCIES (ALL MODULES) ==================== -->
-    <dependencies>
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Actuator -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <!-- Micrometer Prometheus -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-
-        <!-- Testing -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
-    <!-- ==================== BUILD CONFIGURATION ==================== -->
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                    <configuration>
-                        <excludes>
-                            <exclude>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                            </exclude>
-                        </excludes>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <configuration>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                                <version>${lombok.version}</version>
-                            </path>
-                            <path>
-                                <groupId>org.mapstruct</groupId>
-                                <artifactId>mapstruct-processor</artifactId>
-                                <version>${mapstruct.version}</version>
-                            </path>
-                        </annotationProcessorPaths>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
-
+        <module>services/intelligence/forecasting-planning-service</module>
+        <module>services/intelligence/feature-platform-service</module>
+        <module>services/intelligence/control-tower-service</module>
+    </modules>
 </project>

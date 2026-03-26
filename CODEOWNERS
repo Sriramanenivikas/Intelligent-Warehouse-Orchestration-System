@@ -1,0 +1,11 @@
+* @iwos/platform
+
+/docs/ @iwos/architecture
+/platform/ @iwos/platform
+/services/commerce/ @iwos/commerce
+/services/fulfillment/ @iwos/fulfillment
+/services/network/ @iwos/network
+/services/intelligence/ @iwos/intelligence
+/deploy/ @iwos/platform
+/infra/ @iwos/platform
+/contracts/ @iwos/architecture

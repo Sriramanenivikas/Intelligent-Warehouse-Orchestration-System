@@ -1,0 +1,7 @@
+resources:
+  - gatewayclass.yaml
+  - gateway.yaml
+  - httproute-public.yaml
+  - ../../plugins/rate-limiting-plugin.yaml
+  - ../../plugins/request-id-plugin.yaml
+  - ../../plugins/authn-plugin.yaml

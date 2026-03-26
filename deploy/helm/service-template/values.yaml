@@ -1,0 +1,6 @@
+replicaCount: 1
+image:
+  repository: REPLACE_ME
+  tag: latest
+service:
+  port: 8080

@@ -1,0 +1,13 @@
+name: Infra Guard
+
+on:
+  pull_request:
+
+jobs:
+  infra-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: test -f infra/observability/prometheus.yml
+      - run: test -f deploy/helm/service-template/templates/_helpers.tpl
+      - run: test -f platform/kong/gateway-api/base/gateway.yaml

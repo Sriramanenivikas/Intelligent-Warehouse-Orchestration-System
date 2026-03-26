@@ -1,0 +1,6 @@
+apiVersion: v2
+name: control-tower-service
+version: 0.1.0
+appVersion: "0.1.0"
+type: application
+description: Helm skeleton for control-tower-service

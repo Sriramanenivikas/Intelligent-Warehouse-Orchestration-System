@@ -1,0 +1,4 @@
+bucket         = "replace-me"
+key            = "replace-me"
+region         = "ap-south-1"
+dynamodb_table = "replace-me"

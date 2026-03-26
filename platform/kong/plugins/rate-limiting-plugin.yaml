@@ -1,0 +1,8 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: iwos-rate-limit
+plugin: rate-limiting
+config:
+  minute: 300
+  policy: local

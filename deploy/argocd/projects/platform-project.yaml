@@ -1,0 +1,11 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: iwos-platform
+spec:
+  description: Platform and service deployment project skeleton
+  destinations:
+    - namespace: '*'
+      server: '*'
+  sourceRepos:
+    - '*'

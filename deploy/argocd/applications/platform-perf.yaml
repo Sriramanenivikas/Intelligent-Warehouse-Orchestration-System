@@ -1,0 +1,12 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: iwos-perf
+spec:
+  source:
+    repoURL: REPLACE_ME
+    path: deploy/envs/perf
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  project: iwos-platform

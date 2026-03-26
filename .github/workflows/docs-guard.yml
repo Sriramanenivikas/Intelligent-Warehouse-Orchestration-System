@@ -1,0 +1,13 @@
+name: Docs Guard
+
+on:
+  pull_request:
+
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: test -f docs/README.md
+      - run: test -f docs/architecture/service-catalog.md
+      - run: test -f docs/decisions/production-architecture-decisions.md
