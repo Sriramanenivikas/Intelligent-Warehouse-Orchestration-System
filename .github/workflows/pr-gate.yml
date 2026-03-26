@@ -1,0 +1,62 @@
+name: PR Gate
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Validate Maven reactor
+        run: mvn -q -DskipTests validate
+
+      - name: Validate canonical docs
+        run: |
+          test -f docs/README.md
+          test -f docs/architecture/service-catalog.md
+          test -f docs/decisions/production-architecture-decisions.md
+
+      - name: Validate infra scaffolding
+        run: |
+          test -f infra/observability/prometheus.yml
+          test -f deploy/helm/service-template/templates/_helpers.tpl
+          test -f platform/kong/gateway-api/base/gateway.yaml
+
+      - name: Validate repo structure
+        run: |
+          test -d services/commerce
+          test -d services/fulfillment
+          test -d services/network
+          test -d services/intelligence
+          test -d platform/kong
+
+      - name: Validate PR policy
+        if: github.event_name == 'pull_request'
+        env:
+          ACTOR: ${{ github.actor }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [ "$ACTOR" = "dependabot[bot]" ]; then
+            exit 0
+          fi
+          echo "$HEAD_REF" | grep -E '^(feat|fix|docs|chore|refactor|test|ci|perf|release|hotfix)\/[a-z0-9._-]+$' >/dev/null
+          echo "$PR_TITLE" | grep -E '^(feat|fix|docs|chore|refactor|test|build|ci|perf|revert)(\([a-z0-9-]+\))?: .+' >/dev/null

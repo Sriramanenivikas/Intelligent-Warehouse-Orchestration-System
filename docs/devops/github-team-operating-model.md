@@ -39,11 +39,7 @@ Do not create long-lived `dev`, `stage`, `perf`, or `prod` branches. Those are e
 
 These checks should block merges to `main` and `develop`:
 
-- `Repo Validate`
-- `Docs Guard`
-- `Infra Guard`
-- `Structure Guard`
-- `PR Guard`
+- `PR Gate`
 
 ## Review Expectations
 
