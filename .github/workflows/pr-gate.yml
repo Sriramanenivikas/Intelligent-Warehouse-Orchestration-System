@@ -58,5 +58,8 @@ jobs:
           if [ "$ACTOR" = "dependabot[bot]" ]; then
             exit 0
           fi
+          if [ "$HEAD_REF" = "develop" ] || [ "$HEAD_REF" = "main" ]; then
+            exit 0
+          fi
           echo "$HEAD_REF" | grep -E '^(feat|fix|docs|chore|refactor|test|ci|perf|release|hotfix)\/[a-z0-9._-]+$' >/dev/null
           echo "$PR_TITLE" | grep -E '^(feat|fix|docs|chore|refactor|test|build|ci|perf|revert)(\([a-z0-9-]+\))?: .+' >/dev/null
