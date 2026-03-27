@@ -19,7 +19,7 @@ Apply these GitHub settings in the repository UI.
 - dismiss stale approvals when new commits are pushed
 - require conversation resolution
 - require status checks:
-  - `PR Gate`
+  - `gate` from the `PR Gate` workflow
 - block force pushes for non-admins
 - block deletions
 
@@ -29,7 +29,7 @@ Apply these GitHub settings in the repository UI.
 - require at least 1 approval
 - require conversation resolution
 - require status checks:
-  - `PR Gate`
+  - `gate` from the `PR Gate` workflow
 - block force pushes for non-admins
 
 ## Environments
