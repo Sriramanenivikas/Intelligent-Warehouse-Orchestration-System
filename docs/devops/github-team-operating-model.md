@@ -39,7 +39,7 @@ Do not create long-lived `dev`, `stage`, `perf`, or `prod` branches. Those are e
 
 These checks should block merges to `main` and `develop`:
 
-- `PR Gate`
+- `gate` from the `PR Gate` workflow
 
 ## Review Expectations
 
