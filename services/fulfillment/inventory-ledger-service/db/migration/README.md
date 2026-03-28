@@ -1,3 +1,3 @@
 # Database Migrations
 
-This folder is reserved for schema migrations owned by inventory-ledger-service.
+Canonical runtime migrations live under `src/main/resources/db/migration`.

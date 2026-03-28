@@ -1,12 +1,57 @@
 spring:
   application:
     name: inventory-ledger-service
+  datasource:
+    url: ${INVENTORY_LEDGER_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${INVENTORY_LEDGER_DB_USERNAME:iwos}
+    password: ${INVENTORY_LEDGER_DB_PASSWORD:iwos_secret}
+  data:
+    redis:
+      host: ${INVENTORY_LEDGER_REDIS_HOST:localhost}
+      port: ${INVENTORY_LEDGER_REDIS_PORT:56379}
+      password: ${INVENTORY_LEDGER_REDIS_PASSWORD:iwos_secret}
+      timeout: 2s
+      repositories:
+        enabled: false
+  flyway:
+    enabled: true
+    table: inventory_ledger_flyway_schema_history
+    default-schema: inventory_ledger
+    schemas: inventory_ledger
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: inventory_ledger
+        jdbc:
+          time_zone: UTC
 
 server:
-  port: 0
+  port: ${INVENTORY_LEDGER_SERVER_PORT:8082}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${INVENTORY_LEDGER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  file:
+    name: ${INVENTORY_LEDGER_LOG_FILE:logs/inventory-ledger-service.log}
+
+iwos:
+  inventory-ledger:
+    idempotency-cache-ttl: PT24H
+    reservation-ttl: PT15M

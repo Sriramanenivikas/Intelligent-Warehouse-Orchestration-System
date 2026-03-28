@@ -1,6 +1,80 @@
 asyncapi: 3.0.0
 info:
   title: inventory-ledger-service Events
-  version: 0.1.0
-  description: Planning skeleton only. No topics or channels implemented yet.
-channels: {}
+  version: 1.0.0
+  description: Inventory ledger and reservation events
+channels:
+  inventory.stock-adjusted.v1:
+    address: inventory.stock-adjusted.v1
+    messages:
+      stockAdjusted:
+        payload:
+          type: object
+          properties:
+            stockItemId:
+              type: string
+              format: uuid
+            nodeId:
+              type: string
+            sku:
+              type: string
+            onHandQuantity:
+              type: integer
+            reservedQuantity:
+              type: integer
+            occurredAt:
+              type: string
+              format: date-time
+  inventory.reservation-created.v1:
+    address: inventory.reservation-created.v1
+    messages:
+      reservationCreated:
+        payload:
+          type: object
+          properties:
+            reservationId:
+              type: string
+              format: uuid
+            orderReference:
+              type: string
+            nodeId:
+              type: string
+            sku:
+              type: string
+            quantity:
+              type: integer
+            status:
+              type: string
+            occurredAt:
+              type: string
+              format: date-time
+  inventory.reservation-confirmed.v1:
+    address: inventory.reservation-confirmed.v1
+    messages:
+      reservationConfirmed:
+        payload:
+          type: object
+          properties:
+            reservationId:
+              type: string
+              format: uuid
+            status:
+              type: string
+            occurredAt:
+              type: string
+              format: date-time
+  inventory.reservation-released.v1:
+    address: inventory.reservation-released.v1
+    messages:
+      reservationReleased:
+        payload:
+          type: object
+          properties:
+            reservationId:
+              type: string
+              format: uuid
+            status:
+              type: string
+            occurredAt:
+              type: string
+              format: date-time

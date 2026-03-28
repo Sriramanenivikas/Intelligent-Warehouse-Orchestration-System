@@ -1,3 +1,1 @@
-# Database Migrations
-
-This folder is reserved for schema migrations owned by order-orchestrator-service.
+Runtime Flyway migrations live in `src/main/resources/db/migration`.

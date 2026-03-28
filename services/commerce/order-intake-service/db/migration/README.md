@@ -1,3 +1,5 @@
-# Database Migrations
+# Migration Notes
 
-This folder is reserved for schema migrations owned by order-intake-service.
+Canonical Flyway migrations for runtime now live under `src/main/resources/db/migration`.
+
+This folder remains only as a top-level service artifact reference.
