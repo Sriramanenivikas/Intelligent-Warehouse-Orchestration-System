@@ -1,6 +1,279 @@
 openapi: 3.1.0
 info:
   title: inventory-ledger-service API
-  version: 0.1.0
-  description: Planning skeleton only. No endpoints implemented yet.
-paths: {}
+  version: 1.0.0
+  description: Stock adjustment, availability, and reservation API
+paths:
+  /api/v1/stock-adjustments:
+    post:
+      operationId: createStockAdjustment
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+      responses:
+        '202':
+          description: Stock adjustment accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockAdjustmentResponse'
+        '409':
+          description: Stock conflict
+  /api/v1/stock-items/{nodeId}/{sku}:
+    get:
+      operationId: getStockItem
+      parameters:
+        - in: path
+          name: nodeId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: sku
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stock item found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryStockResponse'
+        '404':
+          description: Stock item not found
+  /api/v1/reservations:
+    post:
+      operationId: createReservation
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInventoryReservationRequest'
+      responses:
+        '202':
+          description: Reservation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryReservationResponse'
+        '409':
+          description: Insufficient stock or idempotency conflict
+  /api/v1/reservations/{reservationId}:
+    get:
+      operationId: getReservation
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reservation found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryReservationResponse'
+        '404':
+          description: Reservation not found
+  /api/v1/reservations/{reservationId}/confirm:
+    post:
+      operationId: confirmReservation
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationActionRequest'
+      responses:
+        '200':
+          description: Reservation confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryReservationResponse'
+        '409':
+          description: Reservation state conflict
+  /api/v1/reservations/{reservationId}/release:
+    post:
+      operationId: releaseReservation
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationActionRequest'
+      responses:
+        '200':
+          description: Reservation released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryReservationResponse'
+        '409':
+          description: Reservation state conflict
+components:
+  schemas:
+    StockAdjustmentRequest:
+      type: object
+      required: [nodeId, sku, quantityDelta, reason]
+      properties:
+        nodeId:
+          type: string
+        sku:
+          type: string
+        quantityDelta:
+          type: integer
+        reason:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+    CreateInventoryReservationRequest:
+      type: object
+      required: [orderReference, nodeId, sku, quantity]
+      properties:
+        orderReference:
+          type: string
+        nodeId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+    ReservationActionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+    InventoryStockResponse:
+      type: object
+      required: [nodeId, sku, onHandQuantity, reservedQuantity, availableQuantity, updatedAt]
+      properties:
+        nodeId:
+          type: string
+        sku:
+          type: string
+        onHandQuantity:
+          type: integer
+        reservedQuantity:
+          type: integer
+        availableQuantity:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+    StockAdjustmentResponse:
+      type: object
+      required: [adjustmentId, nodeId, sku, quantityDelta, reason, stock, createdAt]
+      properties:
+        adjustmentId:
+          type: string
+          format: uuid
+        nodeId:
+          type: string
+        sku:
+          type: string
+        quantityDelta:
+          type: integer
+        reason:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+        stock:
+          $ref: '#/components/schemas/InventoryStockResponse'
+        createdAt:
+          type: string
+          format: date-time
+    InventoryReservationResponse:
+      type: object
+      required: [reservationId, orderReference, nodeId, sku, quantity, status, expiresAt, createdAt, stock]
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+        orderReference:
+          type: string
+        nodeId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        status:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        stock:
+          $ref: '#/components/schemas/InventoryStockResponse'
+    ApiError:
+      type: object
+      required: [code, message, timestamp]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: string

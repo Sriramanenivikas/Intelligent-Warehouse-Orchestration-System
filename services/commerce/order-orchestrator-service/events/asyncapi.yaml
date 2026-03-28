@@ -1,6 +1,45 @@
 asyncapi: 3.0.0
 info:
-  title: order-orchestrator-service Events
-  version: 0.1.0
-  description: Planning skeleton only. No topics or channels implemented yet.
-channels: {}
+  title: Order Orchestrator Service Events
+  version: 1.0.0
+  description: Events emitted after downstream inventory orchestration.
+channels:
+  order-orchestrator.inventory-reserved.v1:
+    address: order-orchestrator.inventory-reserved.v1
+    messages:
+      inventoryReserved:
+        payload:
+          type: object
+          properties:
+            workflowId:
+              type: string
+              format: uuid
+            orderIntentId:
+              type: string
+              format: uuid
+            reservationIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+            occurredAt:
+              type: string
+              format: date-time
+  order-orchestrator.inventory-reservation-failed.v1:
+    address: order-orchestrator.inventory-reservation-failed.v1
+    messages:
+      inventoryReservationFailed:
+        payload:
+          type: object
+          properties:
+            workflowId:
+              type: string
+              format: uuid
+            orderIntentId:
+              type: string
+              format: uuid
+            reason:
+              type: string
+            occurredAt:
+              type: string
+              format: date-time

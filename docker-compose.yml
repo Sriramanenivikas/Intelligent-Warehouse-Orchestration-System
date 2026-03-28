@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,7 +7,7 @@ services:
       POSTGRES_PASSWORD: iwos_secret
       POSTGRES_DB: iwos
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -18,7 +16,7 @@ services:
     container_name: iwos-redis
     command: redis-server --requirepass iwos_secret
     ports:
-      - "6379:6379"
+      - "56379:6379"
     volumes:
       - redis_data:/data
 

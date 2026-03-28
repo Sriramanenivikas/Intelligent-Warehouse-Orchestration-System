@@ -1,0 +1,10 @@
+# Register host-running services here once they expose /actuator/prometheus.
+# On macOS Docker Desktop, Prometheus reaches your host via host.docker.internal.
+#
+# Example:
+# - labels:
+#     job: local-services
+#     service: order-intake-service
+#   targets:
+#     - host.docker.internal:8081
+[]

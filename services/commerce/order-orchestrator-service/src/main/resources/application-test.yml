@@ -2,6 +2,19 @@ spring:
   config:
     activate:
       on-profile: test
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos
+    username: iwos
+    password: iwos_secret
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
 
 logging:
   level:

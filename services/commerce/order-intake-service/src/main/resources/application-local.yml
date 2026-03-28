@@ -2,9 +2,21 @@ spring:
   config:
     activate:
       on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos
+    username: iwos
+    password: iwos_secret
+  data:
+    redis:
+      host: localhost
+      port: 56379
+      password: iwos_secret
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces

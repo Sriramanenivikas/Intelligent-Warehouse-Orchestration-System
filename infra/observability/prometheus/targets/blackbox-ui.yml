@@ -1,0 +1,9 @@
+- labels:
+    job: blackbox-http
+  targets:
+    - http://grafana:3000/api/health
+    - http://prometheus:9090/-/ready
+    - http://loki:3100/ready
+    - http://jaeger:16686
+    - http://alertmanager:9093/-/ready
+    - http://otel-collector:13133/
