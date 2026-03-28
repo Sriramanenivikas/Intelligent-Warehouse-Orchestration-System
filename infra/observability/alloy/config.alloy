@@ -1,0 +1,56 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+local.file_match "iwos_logs" {
+  path_targets = [
+    {
+      "__path__" = "/var/log/iwos/*.log",
+      "job"      = "iwos-local",
+      "host"     = "dev-machine",
+    },
+  ]
+}
+
+loki.process "iwos_logs" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.json {
+    expressions = {
+      level      = "level",
+      service    = "service",
+      env        = "env",
+      trace_id   = "trace_id",
+      span_id    = "span_id",
+      request_id = "request_id",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level   = "",
+      service = "",
+      env     = "",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      trace_id   = "",
+      span_id    = "",
+      request_id = "",
+    }
+  }
+}
+
+loki.source.file "iwos_logs" {
+  targets    = local.file_match.iwos_logs.targets
+  forward_to = [loki.process.iwos_logs.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

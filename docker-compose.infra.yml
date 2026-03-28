@@ -1,33 +1,129 @@
-version: "3.9"
-
 services:
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: prom/prometheus:v3.10.0
     container_name: iwos-prometheus
+    restart: unless-stopped
+    depends_on:
+      - alertmanager
+      - blackbox-exporter
+      - otel-collector
     ports:
       - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
     volumes:
       - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/observability/prometheus/targets:/etc/prometheus/targets
+      - ./infra/observability/prometheus/rules:/etc/prometheus/rules
+      - prometheus-data:/prometheus
 
   grafana:
-    image: grafana/grafana:11.3.0
+    image: grafana/grafana:12.4.2
     container_name: iwos-grafana
+    restart: unless-stopped
     depends_on:
+      - alertmanager
+      - loki
       - prometheus
+      - jaeger
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: iwos_admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_METRICS_ENABLED: "true"
     ports:
       - "3000:3000"
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+
+  loki:
+    image: grafana/loki:3.7.0
+    container_name: iwos-loki
+    restart: unless-stopped
+    user: "0:0"
+    ports:
+      - "3100:3100"
+    command:
+      - "-config.file=/etc/loki/config.yml"
+    volumes:
+      - ./infra/observability/loki/config.yml:/etc/loki/config.yml
+      - loki-data:/tmp/loki
+
+  alloy:
+    image: grafana/alloy:v1.14.2
+    container_name: iwos-alloy
+    restart: unless-stopped
+    depends_on:
+      - loki
+    ports:
+      - "12345:12345"
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - "/etc/alloy/config.alloy"
+    volumes:
+      - ./infra/observability/alloy/config.alloy:/etc/alloy/config.alloy
+      - ./logs:/var/log/iwos
+      - alloy-data:/var/lib/alloy/data
+
+  alertmanager:
+    image: prom/alertmanager:v0.31.1
+    container_name: iwos-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./infra/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: iwos-blackbox-exporter
+    restart: unless-stopped
+    ports:
+      - "9115:9115"
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"
+    volumes:
+      - ./infra/observability/blackbox/config.yml:/etc/blackbox_exporter/config.yml
 
   jaeger:
-    image: jaegertracing/all-in-one:1.62.0
+    image: jaegertracing/jaeger:2.16.0
     container_name: iwos-jaeger
-    environment:
-      COLLECTOR_OTLP_ENABLED: "true"
+    restart: unless-stopped
     ports:
       - "16686:16686"
+      - "14269:14269"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.148.0
+    container_name: iwos-otel-collector
+    restart: unless-stopped
+    depends_on:
+      - jaeger
+      - loki
+    command:
+      - "--config=/etc/otelcol-contrib/config.yml"
+    ports:
       - "4317:4317"
       - "4318:4318"
+      - "13133:13133"
+      - "8888:8888"
+      - "8889:8889"
+    volumes:
+      - ./infra/observability/otel-collector/config.yml:/etc/otelcol-contrib/config.yml
+
+volumes:
+  alertmanager-data:
+  alloy-data:
+  grafana-data:
+  loki-data:
+  prometheus-data:

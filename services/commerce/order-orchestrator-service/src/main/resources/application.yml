@@ -1,12 +1,50 @@
 spring:
   application:
     name: order-orchestrator-service
+  datasource:
+    url: ${ORDER_ORCHESTRATOR_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${ORDER_ORCHESTRATOR_DB_USERNAME:iwos}
+    password: ${ORDER_ORCHESTRATOR_DB_PASSWORD:iwos_secret}
+  flyway:
+    enabled: true
+    table: order_orchestration_flyway_schema_history
+    default-schema: order_orchestration
+    schemas: order_orchestration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: order_orchestration
+        jdbc:
+          time_zone: UTC
 
 server:
-  port: 0
+  port: ${ORDER_ORCHESTRATOR_SERVER_PORT:8083}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${ORDER_ORCHESTRATOR_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  file:
+    name: ${ORDER_ORCHESTRATOR_LOG_FILE:logs/order-orchestrator-service.log}
+
+iwos:
+  order-orchestrator:
+    inventory-service-base-url: ${ORDER_ORCHESTRATOR_INVENTORY_SERVICE_BASE_URL:http://localhost:8082}
+    default-fulfillment-node-id: ${ORDER_ORCHESTRATOR_DEFAULT_FULFILLMENT_NODE_ID:NODE-DELHI-01}
+    pending-fetch-limit: ${ORDER_ORCHESTRATOR_PENDING_FETCH_LIMIT:25}

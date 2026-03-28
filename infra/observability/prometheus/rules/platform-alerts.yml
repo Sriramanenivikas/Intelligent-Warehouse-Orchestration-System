@@ -1,0 +1,47 @@
+groups:
+  - name: iwos-platform-health
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target down"
+          description: "A scrape target has been down for more than 2 minutes."
+
+      - alert: OTelCollectorUnavailable
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OTel Collector unavailable"
+          description: "The telemetry intake layer is not reachable."
+
+      - alert: AlloyUnavailable
+        expr: up{job="alloy"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alloy unavailable"
+          description: "The local log shipping agent is not reachable."
+
+      - alert: BlackboxProbeFailed
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP probe failed"
+          description: "A platform endpoint is not returning a successful HTTP probe."
+
+      - alert: NoServiceTargetsRegistered
+        expr: absent(up{job="local-services"})
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No application scrape targets registered"
+          description: "No future service metrics endpoints have been added to Prometheus file discovery."
