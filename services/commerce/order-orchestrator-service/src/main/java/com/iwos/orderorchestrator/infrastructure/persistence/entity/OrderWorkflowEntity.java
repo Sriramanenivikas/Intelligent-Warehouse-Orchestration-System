@@ -1,6 +1,7 @@
 package com.iwos.orderorchestrator.infrastructure.persistence.entity;
 
 import com.iwos.orderorchestrator.domain.workflow.OrderWorkflowStatus;
+import com.iwos.orderorchestrator.domain.workflow.OrderWorkflowPaymentStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,7 +34,7 @@ public class OrderWorkflowEntity {
     @Column(name = "customer_id", nullable = false, length = 64)
     private String customerId;
 
-    @Column(name = "fulfillment_node_id", nullable = false, length = 64)
+    @Column(name = "fulfillment_node_id", length = 64)
     private String fulfillmentNodeId;
 
     @Enumerated(EnumType.STRING)
@@ -42,6 +43,22 @@ public class OrderWorkflowEntity {
 
     @Column(name = "failure_reason", length = 512)
     private String failureReason;
+
+    @Column(name = "payment_intent_id")
+    private UUID paymentIntentId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", length = 32)
+    private OrderWorkflowPaymentStatus paymentStatus;
+
+    @Column(name = "payment_provider_reference", length = 128)
+    private String paymentProviderReference;
+
+    @Column(name = "payment_failure_reason", length = 512)
+    private String paymentFailureReason;
+
+    @Column(name = "payment_processed_at")
+    private Instant paymentProcessedAt;
 
     @Column(name = "accepted_at", nullable = false)
     private Instant acceptedAt;
@@ -114,6 +131,46 @@ public class OrderWorkflowEntity {
 
     public void setFailureReason(String failureReason) {
         this.failureReason = failureReason;
+    }
+
+    public UUID getPaymentIntentId() {
+        return paymentIntentId;
+    }
+
+    public void setPaymentIntentId(UUID paymentIntentId) {
+        this.paymentIntentId = paymentIntentId;
+    }
+
+    public OrderWorkflowPaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(OrderWorkflowPaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getPaymentProviderReference() {
+        return paymentProviderReference;
+    }
+
+    public void setPaymentProviderReference(String paymentProviderReference) {
+        this.paymentProviderReference = paymentProviderReference;
+    }
+
+    public String getPaymentFailureReason() {
+        return paymentFailureReason;
+    }
+
+    public void setPaymentFailureReason(String paymentFailureReason) {
+        this.paymentFailureReason = paymentFailureReason;
+    }
+
+    public Instant getPaymentProcessedAt() {
+        return paymentProcessedAt;
+    }
+
+    public void setPaymentProcessedAt(Instant paymentProcessedAt) {
+        this.paymentProcessedAt = paymentProcessedAt;
     }
 
     public Instant getAcceptedAt() {

@@ -7,6 +7,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,18 @@ public class SourceOrderIntentEntity {
     @Column(name = "customer_id", nullable = false, length = 64)
     private String customerId;
 
+    @Column(name = "payment_mode", nullable = false, length = 32)
+    private String paymentMode;
+
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency;
+
+    @Column(name = "delivery_address_json", nullable = false, columnDefinition = "text")
+    private String deliveryAddressJson;
+
+    @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalAmount;
+
     @Column(name = "accepted_at", nullable = false)
     private Instant acceptedAt;
 
@@ -35,6 +48,22 @@ public class SourceOrderIntentEntity {
 
     public String getCustomerId() {
         return customerId;
+    }
+
+    public String getPaymentMode() {
+        return paymentMode;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public String getDeliveryAddressJson() {
+        return deliveryAddressJson;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
     }
 
     public Instant getAcceptedAt() {

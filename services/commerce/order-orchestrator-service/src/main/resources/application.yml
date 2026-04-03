@@ -73,6 +73,8 @@ logging:
 iwos:
   order-orchestrator:
     inventory-service-base-url: ${ORDER_ORCHESTRATOR_INVENTORY_SERVICE_BASE_URL:http://localhost:8082}
+    promise-service-base-url: ${ORDER_ORCHESTRATOR_PROMISE_SERVICE_BASE_URL:http://localhost:8084}
+    payment-service-base-url: ${ORDER_ORCHESTRATOR_PAYMENT_SERVICE_BASE_URL:http://localhost:8085}
     default-fulfillment-node-id: ${ORDER_ORCHESTRATOR_DEFAULT_FULFILLMENT_NODE_ID:NODE-DELHI-01}
     pending-fetch-limit: ${ORDER_ORCHESTRATOR_PENDING_FETCH_LIMIT:25}
     kafka:
