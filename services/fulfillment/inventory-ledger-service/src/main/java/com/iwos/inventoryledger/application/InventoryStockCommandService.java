@@ -11,6 +11,7 @@ import com.iwos.inventoryledger.infrastructure.persistence.entity.InventoryLedge
 import com.iwos.inventoryledger.infrastructure.persistence.entity.InventoryOutboxEventEntity;
 import com.iwos.inventoryledger.infrastructure.persistence.entity.InventoryStockEntity;
 import com.iwos.inventoryledger.infrastructure.persistence.jdbc.InventoryStockMutationStore;
+import com.iwos.inventoryledger.infrastructure.observability.InventoryMetrics;
 import com.iwos.inventoryledger.infrastructure.persistence.repository.InventoryLedgerEntryRepository;
 import com.iwos.inventoryledger.infrastructure.persistence.repository.InventoryOutboxEventRepository;
 import com.iwos.inventoryledger.infrastructure.persistence.repository.InventoryStockRepository;
@@ -38,6 +39,7 @@ public class InventoryStockCommandService {
     private final InventoryResponseMapper inventoryResponseMapper;
     private final RequestHashService requestHashService;
     private final ObjectMapper objectMapper;
+    private final InventoryMetrics inventoryMetrics;
 
     public InventoryStockCommandService(
             InventoryCommandIdempotencyService inventoryCommandIdempotencyService,
@@ -47,7 +49,8 @@ public class InventoryStockCommandService {
             InventoryOutboxEventRepository inventoryOutboxEventRepository,
             InventoryResponseMapper inventoryResponseMapper,
             RequestHashService requestHashService,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            InventoryMetrics inventoryMetrics
     ) {
         this.inventoryCommandIdempotencyService = inventoryCommandIdempotencyService;
         this.inventoryStockMutationStore = inventoryStockMutationStore;
@@ -57,25 +60,35 @@ public class InventoryStockCommandService {
         this.inventoryResponseMapper = inventoryResponseMapper;
         this.requestHashService = requestHashService;
         this.objectMapper = objectMapper;
+        this.inventoryMetrics = inventoryMetrics;
     }
 
     @Transactional
     public IdempotentCommandResult<StockAdjustmentResponse> adjustStock(String idempotencyKey, StockAdjustmentRequest request) {
-        String nodeId = normalize(request.nodeId());
-        String sku = normalize(request.sku());
-        StockAdjustmentRequest normalizedRequest = new StockAdjustmentRequest(
-                nodeId,
-                sku,
-                request.quantityDelta(),
-                request.reason().trim(),
-                trimToNull(request.referenceType()),
-                trimToNull(request.referenceId())
-        );
-        String requestHash = requestHashService.hash(Map.of("operationType", OPERATION_TYPE, "request", normalizedRequest));
+        var commandTimer = inventoryMetrics.startCommandTimer();
+        try {
+            String nodeId = normalize(request.nodeId());
+            String sku = normalize(request.sku());
+            StockAdjustmentRequest normalizedRequest = new StockAdjustmentRequest(
+                    nodeId,
+                    sku,
+                    request.quantityDelta(),
+                    request.reason().trim(),
+                    trimToNull(request.referenceType()),
+                    trimToNull(request.referenceId())
+            );
+            String requestHash = requestHashService.hash(Map.of("operationType", OPERATION_TYPE, "request", normalizedRequest));
 
-        return inventoryCommandIdempotencyService
-                .resolveReplay(idempotencyKey, OPERATION_TYPE, requestHash, StockAdjustmentResponse.class)
-                .orElseGet(() -> createAdjustment(idempotencyKey, requestHash, normalizedRequest));
+            IdempotentCommandResult<StockAdjustmentResponse> result = inventoryCommandIdempotencyService
+                    .resolveReplay(idempotencyKey, OPERATION_TYPE, requestHash, StockAdjustmentResponse.class)
+                    .orElseGet(() -> createAdjustment(idempotencyKey, requestHash, normalizedRequest));
+
+            inventoryMetrics.recordCommand("stock_adjustment", result.replayed() ? "replayed" : "accepted", commandTimer);
+            return result;
+        } catch (RuntimeException exception) {
+            inventoryMetrics.recordCommand("stock_adjustment", "failed", commandTimer);
+            throw exception;
+        }
     }
 
     private IdempotentCommandResult<StockAdjustmentResponse> createAdjustment(

@@ -1,6 +1,7 @@
 package com.iwos.orderorchestrator.infrastructure.persistence.repository;
 
 import com.iwos.orderorchestrator.infrastructure.persistence.entity.OrderWorkflowEntity;
+import com.iwos.orderorchestrator.domain.workflow.OrderWorkflowStatus;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -8,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface OrderWorkflowRepository extends JpaRepository<OrderWorkflowEntity, UUID> {
+
+    long countByStatus(OrderWorkflowStatus status);
 
     @EntityGraph(attributePaths = "reservations")
     Optional<OrderWorkflowEntity> findByOrderIntentId(UUID orderIntentId);

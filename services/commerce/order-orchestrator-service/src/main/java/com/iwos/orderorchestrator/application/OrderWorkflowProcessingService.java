@@ -18,6 +18,7 @@ import com.iwos.orderorchestrator.infrastructure.persistence.entity.OrderWorkflo
 import com.iwos.orderorchestrator.infrastructure.persistence.entity.OrderWorkflowReservationEntity;
 import com.iwos.orderorchestrator.infrastructure.persistence.repository.OrderOrchestratorOutboxEventRepository;
 import com.iwos.orderorchestrator.infrastructure.persistence.repository.OrderWorkflowRepository;
+import com.iwos.orderorchestrator.infrastructure.observability.OrderWorkflowMetrics;
 import com.iwos.orderorchestrator.infrastructure.source.entity.SourceOrderIntentEntity;
 import com.iwos.orderorchestrator.infrastructure.source.entity.SourceOrderIntentItemEntity;
 import com.iwos.orderorchestrator.infrastructure.source.entity.SourceOutboxEventEntity;
@@ -49,6 +50,7 @@ public class OrderWorkflowProcessingService {
     private final OrderOrchestratorServiceProperties properties;
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
+    private final OrderWorkflowMetrics orderWorkflowMetrics;
 
     public OrderWorkflowProcessingService(
             SourceOutboxEventRepository sourceOutboxEventRepository,
@@ -59,7 +61,8 @@ public class OrderWorkflowProcessingService {
             InventoryServiceClient inventoryServiceClient,
             OrderOrchestratorServiceProperties properties,
             TransactionTemplate transactionTemplate,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            OrderWorkflowMetrics orderWorkflowMetrics
     ) {
         this.sourceOutboxEventRepository = sourceOutboxEventRepository;
         this.sourceOrderIntentRepository = sourceOrderIntentRepository;
@@ -70,6 +73,7 @@ public class OrderWorkflowProcessingService {
         this.properties = properties;
         this.transactionTemplate = transactionTemplate;
         this.objectMapper = objectMapper;
+        this.orderWorkflowMetrics = orderWorkflowMetrics;
     }
 
     public ProcessPendingWorkflowsResponse processPending(int requestedLimit) {
@@ -86,6 +90,7 @@ public class OrderWorkflowProcessingService {
         Optional<OrderWorkflowResponse> existingWorkflow = orderWorkflowRepository.findByOrderIntentId(orderIntentId)
                 .map(responseMapper::toResponse);
         if (existingWorkflow.isPresent()) {
+            orderWorkflowMetrics.recordWorkflowProcessed("existing", orderWorkflowMetrics.startWorkflowTimer());
             return existingWorkflow.get();
         }
 
@@ -97,60 +102,75 @@ public class OrderWorkflowProcessingService {
     }
 
     private OrderWorkflowResponse processAcceptedEvent(SourceOutboxEventEntity sourceEvent) {
-        Optional<OrderWorkflowResponse> existingWorkflow = orderWorkflowRepository
-                .findBySourceOutboxEventId(sourceEvent.getOutboxEventId())
-                .map(responseMapper::toResponse);
-        if (existingWorkflow.isPresent()) {
-            return existingWorkflow.get();
-        }
-
-        SourceOrderIntentEntity orderIntent = sourceOrderIntentRepository
-                .findWithItemsByOrderIntentId(sourceEvent.getAggregateId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "Source order intent not found for aggregateId=%s".formatted(sourceEvent.getAggregateId())
-                ));
-
-        OrderWorkflowEntity workflow;
+        var workflowTimer = orderWorkflowMetrics.startWorkflowTimer();
         try {
-            workflow = transactionTemplate.execute(status -> initializeWorkflow(sourceEvent, orderIntent));
-        } catch (DataIntegrityViolationException exception) {
-            return orderWorkflowRepository.findBySourceOutboxEventId(sourceEvent.getOutboxEventId())
-                    .map(responseMapper::toResponse)
-                    .orElseThrow(() -> exception);
-        }
-
-        List<WorkflowReservationDraft> reservationDrafts = new ArrayList<>();
-        try {
-            for (SourceOrderIntentItemEntity item : orderIntent.getItems().stream()
-                    .sorted((left, right) -> left.getCreatedAt().compareTo(right.getCreatedAt()))
-                    .toList()) {
-                InventoryReservationClientResponse reservation = inventoryServiceClient.createReservation(
-                        reserveIdempotencyKey(orderIntent.getOrderIntentId(), item.getOrderIntentItemId()),
-                        new InventoryCreateReservationRequest(
-                                orderIntent.getOrderIntentId().toString(),
-                                workflow.getFulfillmentNodeId(),
-                                item.getSku(),
-                                item.getQuantity()
-                        )
-                );
-                reservationDrafts.add(new WorkflowReservationDraft(
-                        item.getOrderIntentItemId(),
-                        reservation.reservationId(),
-                        reservation.nodeId(),
-                        reservation.sku(),
-                        reservation.quantity(),
-                        OrderWorkflowReservationStatus.RESERVED
-                ));
+            Optional<OrderWorkflowResponse> existingWorkflow = orderWorkflowRepository
+                    .findBySourceOutboxEventId(sourceEvent.getOutboxEventId())
+                    .map(responseMapper::toResponse);
+            if (existingWorkflow.isPresent()) {
+                orderWorkflowMetrics.recordWorkflowProcessed("existing", workflowTimer);
+                return existingWorkflow.get();
             }
 
-            return transactionTemplate.execute(status -> finalizeSuccess(workflow.getWorkflowId(), reservationDrafts));
+            SourceOrderIntentEntity orderIntent = sourceOrderIntentRepository
+                    .findWithItemsByOrderIntentId(sourceEvent.getAggregateId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Source order intent not found for aggregateId=%s".formatted(sourceEvent.getAggregateId())
+                    ));
+
+            OrderWorkflowEntity workflow;
+            try {
+                workflow = transactionTemplate.execute(status -> initializeWorkflow(sourceEvent, orderIntent));
+            } catch (DataIntegrityViolationException exception) {
+                OrderWorkflowResponse response = orderWorkflowRepository.findBySourceOutboxEventId(sourceEvent.getOutboxEventId())
+                        .map(responseMapper::toResponse)
+                        .orElseThrow(() -> exception);
+                orderWorkflowMetrics.recordWorkflowProcessed("existing", workflowTimer);
+                return response;
+            }
+
+            List<WorkflowReservationDraft> reservationDrafts = new ArrayList<>();
+            try {
+                for (SourceOrderIntentItemEntity item : orderIntent.getItems().stream()
+                        .sorted((left, right) -> left.getCreatedAt().compareTo(right.getCreatedAt()))
+                        .toList()) {
+                    InventoryReservationClientResponse reservation = inventoryServiceClient.createReservation(
+                            reserveIdempotencyKey(orderIntent.getOrderIntentId(), item.getOrderIntentItemId()),
+                            new InventoryCreateReservationRequest(
+                                    orderIntent.getOrderIntentId().toString(),
+                                    workflow.getFulfillmentNodeId(),
+                                    item.getSku(),
+                                    item.getQuantity()
+                            )
+                    );
+                    reservationDrafts.add(new WorkflowReservationDraft(
+                            item.getOrderIntentItemId(),
+                            reservation.reservationId(),
+                            reservation.nodeId(),
+                            reservation.sku(),
+                            reservation.quantity(),
+                            OrderWorkflowReservationStatus.RESERVED
+                    ));
+                }
+
+                OrderWorkflowResponse response =
+                        transactionTemplate.execute(status -> finalizeSuccess(workflow.getWorkflowId(), reservationDrafts));
+                orderWorkflowMetrics.recordWorkflowProcessed("inventory_reserved", workflowTimer);
+                return response;
+            } catch (RuntimeException exception) {
+                List<WorkflowReservationDraft> compensatedReservations = compensateReservations(
+                        orderIntent.getOrderIntentId(),
+                        reservationDrafts
+                );
+                orderWorkflowMetrics.recordReservationCompensation(compensatedReservations.size());
+                OrderWorkflowResponse response = transactionTemplate.execute(status ->
+                        finalizeFailure(workflow.getWorkflowId(), compensatedReservations, exception.getMessage()));
+                orderWorkflowMetrics.recordWorkflowProcessed("inventory_reservation_failed", workflowTimer);
+                return response;
+            }
         } catch (RuntimeException exception) {
-            List<WorkflowReservationDraft> compensatedReservations = compensateReservations(
-                    orderIntent.getOrderIntentId(),
-                    reservationDrafts
-            );
-            return transactionTemplate.execute(status ->
-                    finalizeFailure(workflow.getWorkflowId(), compensatedReservations, exception.getMessage()));
+            orderWorkflowMetrics.recordWorkflowProcessed("failed", workflowTimer);
+            throw exception;
         }
     }
 
