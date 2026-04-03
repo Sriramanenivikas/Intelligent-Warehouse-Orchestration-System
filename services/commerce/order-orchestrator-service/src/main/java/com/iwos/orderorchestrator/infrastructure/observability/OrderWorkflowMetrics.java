@@ -22,6 +22,10 @@ public class OrderWorkflowMetrics {
         return Timer.start(meterRegistry);
     }
 
+    public Timer.Sample startPaymentClientTimer() {
+        return Timer.start(meterRegistry);
+    }
+
     public void recordWorkflowProcessed(String status, Timer.Sample sample) {
         Counter.builder("iwos.order.workflow.process")
                 .description("Processed order workflows by status")
@@ -46,6 +50,22 @@ public class OrderWorkflowMetrics {
 
         sample.stop(Timer.builder("iwos.order.workflow.inventory.client.duration")
                 .description("Order workflow inventory client call duration")
+                .tag("action", action)
+                .tag("outcome", outcome)
+                .publishPercentileHistogram()
+                .register(meterRegistry));
+    }
+
+    public void recordPaymentClientCall(String action, String outcome, Timer.Sample sample) {
+        Counter.builder("iwos.order.workflow.payment.client")
+                .description("Order workflow payment client calls by action and outcome")
+                .tag("action", action)
+                .tag("outcome", outcome)
+                .register(meterRegistry)
+                .increment();
+
+        sample.stop(Timer.builder("iwos.order.workflow.payment.client.duration")
+                .description("Order workflow payment client call duration")
                 .tag("action", action)
                 .tag("outcome", outcome)
                 .publishPercentileHistogram()
