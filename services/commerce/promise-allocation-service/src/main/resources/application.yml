@@ -1,12 +1,62 @@
 spring:
   application:
     name: promise-allocation-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: ${PROMISE_ALLOCATION_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${PROMISE_ALLOCATION_DB_USERNAME:iwos}
+    password: ${PROMISE_ALLOCATION_DB_PASSWORD:iwos_secret}
+  flyway:
+    enabled: true
+    table: promise_allocation_flyway_schema_history
+    default-schema: promise_allocation
+    schemas: promise_allocation
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: promise_allocation
+        jdbc:
+          time_zone: UTC
 
 server:
-  port: 0
+  port: ${PROMISE_ALLOCATION_SERVER_PORT:8084}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      service: ${spring.application.name}
+      env: ${SPRING_PROFILES_ACTIVE:local}
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+          client:
+            requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${PROMISE_ALLOCATION_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  file:
+    name: ${PROMISE_ALLOCATION_LOG_FILE:logs/promise-allocation-service.log}
+
+iwos:
+  promise-allocation:
+    inventory-service-base-url: ${PROMISE_ALLOCATION_INVENTORY_SERVICE_BASE_URL:http://localhost:8082}
+    promised-duration: ${PROMISE_ALLOCATION_PROMISED_DURATION:PT45M}

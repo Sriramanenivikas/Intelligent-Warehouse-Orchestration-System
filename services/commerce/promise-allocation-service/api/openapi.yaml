@@ -1,6 +1,161 @@
 openapi: 3.1.0
 info:
-  title: promise-allocation-service API
-  version: 0.1.0
-  description: Planning skeleton only. No endpoints implemented yet.
-paths: {}
+  title: Promise Allocation Service API
+  version: 1.0.0
+  description: Resolves fulfillment promises from node priority and inventory availability.
+servers:
+  - url: http://localhost:8084
+paths:
+  /api/v1/promises/resolve:
+    post:
+      operationId: resolvePromise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolvePromiseRequest'
+      responses:
+        '200':
+          description: Promise evaluated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromiseEvaluationResponse'
+        '400':
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/v1/promises/{evaluationId}:
+    get:
+      operationId: getPromiseEvaluation
+      parameters:
+        - in: path
+          name: evaluationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Promise evaluation found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromiseEvaluationResponse'
+        '404':
+          description: Promise evaluation not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+components:
+  schemas:
+    ResolvePromiseRequest:
+      type: object
+      required: [customerId, deliveryAddress, items]
+      properties:
+        customerId:
+          type: string
+        deliveryAddress:
+          $ref: '#/components/schemas/AddressPayload'
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PromiseItemRequest'
+    AddressPayload:
+      type: object
+      required: [name, line1, city, state, postalCode, country, phone]
+      properties:
+        name:
+          type: string
+        line1:
+          type: string
+        line2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        phone:
+          type: string
+    PromiseItemRequest:
+      type: object
+      required: [sku, quantity]
+      properties:
+        sku:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+    PromiseEvaluationResponse:
+      type: object
+      required:
+        - evaluationId
+        - status
+        - evaluatedAt
+        - customerId
+        - items
+      properties:
+        evaluationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ALLOCATED, UNFULFILLABLE]
+        fulfillmentNodeId:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        promisedBy:
+          type: string
+          format: date-time
+          nullable: true
+        evaluatedAt:
+          type: string
+          format: date-time
+        customerId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromiseItemDecisionResponse'
+    PromiseItemDecisionResponse:
+      type: object
+      required: [sku, requestedQuantity, availableQuantity, fulfillable]
+      properties:
+        sku:
+          type: string
+        requestedQuantity:
+          type: integer
+        availableQuantity:
+          type: integer
+        fulfillable:
+          type: boolean
+    ApiError:
+      type: object
+      required: [code, message, requestId, timestamp]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: string
