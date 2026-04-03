@@ -1,8 +1,5 @@
 spring:
-  config:
-    activate:
-      on-profile: test
-
-logging:
-  level:
-    root: WARN
+  application:
+    name: payment-service
+server:
+  port: 0
