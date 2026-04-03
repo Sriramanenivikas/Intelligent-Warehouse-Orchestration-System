@@ -26,6 +26,7 @@ public class OrderIntentResponseMapper {
                     entity.getChannel(),
                     entity.getPaymentMode(),
                     entity.getCurrency(),
+                    entity.getTotalAmount(),
                     entity.getStatus(),
                     entity.getAcceptedAt(),
                     objectMapper.readValue(entity.getDeliveryAddressJson(), AddressPayload.class),
