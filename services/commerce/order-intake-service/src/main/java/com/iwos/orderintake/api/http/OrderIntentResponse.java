@@ -4,6 +4,7 @@ import com.iwos.orderintake.domain.order.OrderChannel;
 import com.iwos.orderintake.domain.order.OrderIntentStatus;
 import com.iwos.orderintake.domain.order.PaymentMode;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ public record OrderIntentResponse(
         OrderChannel channel,
         PaymentMode paymentMode,
         String currency,
+        BigDecimal totalAmount,
         OrderIntentStatus status,
         Instant acceptedAt,
         AddressPayload deliveryAddress,

@@ -127,6 +127,7 @@ public class OrderIntakeCommandService {
         orderIntent.setChannel(request.channel());
         orderIntent.setPaymentMode(request.paymentMode());
         orderIntent.setCurrency(request.currency().trim().toUpperCase());
+        orderIntent.setTotalAmount(request.totalAmount().setScale(2));
         orderIntent.setDeliveryAddressJson(writeJson(request.deliveryAddress()));
         orderIntent.setStatus(OrderIntentStatus.ACCEPTED);
         orderIntent.setRequestHash(requestHash);
