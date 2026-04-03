@@ -2,9 +2,21 @@ spring:
   config:
     activate:
       on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos
+    username: iwos
+    password: iwos_secret
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,metrics,prometheus
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+iwos:
+  promise-allocation:
+    inventory-service-base-url: http://localhost:8082
+    promised-duration: PT45M

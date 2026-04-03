@@ -1,7 +1,8 @@
 spring:
-  config:
-    activate:
-      on-profile: test
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos
+    username: iwos
+    password: iwos_secret
 
 logging:
   level:
