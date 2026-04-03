@@ -23,8 +23,10 @@ Thumbs.db
 
 # Logs
 *.log
+*.log.gz
 logs/*
 !logs/.gitkeep
+**/logs/archive/
 
 # Maven
 .mvn/wrapper/maven-wrapper.jar
