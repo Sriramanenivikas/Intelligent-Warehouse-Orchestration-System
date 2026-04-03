@@ -14,7 +14,6 @@ import com.iwos.orderintake.infrastructure.persistence.entity.OutboxEventEntity;
 import com.iwos.orderintake.infrastructure.persistence.repository.IdempotencyRecordRepository;
 import com.iwos.orderintake.infrastructure.persistence.repository.OrderIntentRepository;
 import com.iwos.orderintake.infrastructure.persistence.repository.OutboxEventRepository;
-import com.iwos.orderintake.infrastructure.observability.OrderIntakeMetrics;
 import com.iwos.orderintake.infrastructure.redis.IdempotencyCache;
 import com.iwos.orderintake.infrastructure.redis.IdempotencyCacheEntry;
 import com.iwos.orderintake.shared.RequestHashService;
@@ -42,7 +41,6 @@ public class OrderIntakeCommandService {
     private final IdempotencyCache idempotencyCache;
     private final RequestHashService requestHashService;
     private final ObjectMapper objectMapper;
-    private final OrderIntakeMetrics orderIntakeMetrics;
 
     public OrderIntakeCommandService(
             OrderIntentRepository orderIntentRepository,
@@ -51,8 +49,7 @@ public class OrderIntakeCommandService {
             OrderIntentResponseMapper responseMapper,
             IdempotencyCache idempotencyCache,
             RequestHashService requestHashService,
-            ObjectMapper objectMapper,
-            OrderIntakeMetrics orderIntakeMetrics
+            ObjectMapper objectMapper
     ) {
         this.orderIntentRepository = orderIntentRepository;
         this.idempotencyRecordRepository = idempotencyRecordRepository;
@@ -61,40 +58,27 @@ public class OrderIntakeCommandService {
         this.idempotencyCache = idempotencyCache;
         this.requestHashService = requestHashService;
         this.objectMapper = objectMapper;
-        this.orderIntakeMetrics = orderIntakeMetrics;
     }
 
     @Transactional
     public OrderIntentAcceptedResult accept(String idempotencyKey, CreateOrderIntentRequest request) {
-        var acceptTimer = orderIntakeMetrics.startAcceptTimer();
+        String requestHash = requestHashService.hash(request);
+
+        Optional<OrderIntentAcceptedResult> cachedReplay = resolveFromCache(idempotencyKey, requestHash);
+        if (cachedReplay.isPresent()) {
+            return cachedReplay.get();
+        }
+
+        Optional<OrderIntentAcceptedResult> persistedReplay = resolveFromPersistence(idempotencyKey, requestHash);
+        if (persistedReplay.isPresent()) {
+            return persistedReplay.get();
+        }
+
         try {
-            String requestHash = requestHashService.hash(request);
-
-            Optional<OrderIntentAcceptedResult> cachedReplay = resolveFromCache(idempotencyKey, requestHash);
-            if (cachedReplay.isPresent()) {
-                orderIntakeMetrics.recordAccept("replayed", acceptTimer);
-                return cachedReplay.get();
-            }
-
-            Optional<OrderIntentAcceptedResult> persistedReplay = resolveFromPersistence(idempotencyKey, requestHash);
-            if (persistedReplay.isPresent()) {
-                orderIntakeMetrics.recordAccept("replayed", acceptTimer);
-                return persistedReplay.get();
-            }
-
-            try {
-                OrderIntentAcceptedResult result = createNewOrderIntent(idempotencyKey, requestHash, request);
-                orderIntakeMetrics.recordAccept("accepted", acceptTimer);
-                return result;
-            } catch (DataIntegrityViolationException exception) {
-                OrderIntentAcceptedResult result = resolveFromPersistence(idempotencyKey, requestHash)
-                        .orElseThrow(() -> exception);
-                orderIntakeMetrics.recordAccept("replayed", acceptTimer);
-                return result;
-            }
-        } catch (RuntimeException exception) {
-            orderIntakeMetrics.recordAccept("failed", acceptTimer);
-            throw exception;
+            return createNewOrderIntent(idempotencyKey, requestHash, request);
+        } catch (DataIntegrityViolationException exception) {
+            return resolveFromPersistence(idempotencyKey, requestHash)
+                    .orElseThrow(() -> exception);
         }
     }
 

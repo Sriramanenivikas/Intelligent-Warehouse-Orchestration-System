@@ -11,7 +11,6 @@ import com.iwos.inventoryledger.domain.reservation.InventoryReservationNotFoundE
 import com.iwos.inventoryledger.domain.reservation.InventoryReservationStatus;
 import com.iwos.inventoryledger.domain.reservation.ReservationStateConflictException;
 import com.iwos.inventoryledger.infrastructure.config.InventoryLedgerServiceProperties;
-import com.iwos.inventoryledger.infrastructure.observability.InventoryMetrics;
 import com.iwos.inventoryledger.infrastructure.persistence.InventoryResponseMapper;
 import com.iwos.inventoryledger.infrastructure.persistence.entity.InventoryLedgerEntryEntity;
 import com.iwos.inventoryledger.infrastructure.persistence.entity.InventoryOutboxEventEntity;
@@ -46,7 +45,6 @@ public class InventoryReservationCommandService {
     private final InventoryLedgerServiceProperties inventoryLedgerServiceProperties;
     private final RequestHashService requestHashService;
     private final ObjectMapper objectMapper;
-    private final InventoryMetrics inventoryMetrics;
 
     public InventoryReservationCommandService(
             InventoryCommandIdempotencyService inventoryCommandIdempotencyService,
@@ -57,8 +55,7 @@ public class InventoryReservationCommandService {
             InventoryResponseMapper inventoryResponseMapper,
             InventoryLedgerServiceProperties inventoryLedgerServiceProperties,
             RequestHashService requestHashService,
-            ObjectMapper objectMapper,
-            InventoryMetrics inventoryMetrics
+            ObjectMapper objectMapper
     ) {
         this.inventoryCommandIdempotencyService = inventoryCommandIdempotencyService;
         this.inventoryReservationRepository = inventoryReservationRepository;
@@ -69,7 +66,6 @@ public class InventoryReservationCommandService {
         this.inventoryLedgerServiceProperties = inventoryLedgerServiceProperties;
         this.requestHashService = requestHashService;
         this.objectMapper = objectMapper;
-        this.inventoryMetrics = inventoryMetrics;
     }
 
     @Transactional
@@ -77,27 +73,17 @@ public class InventoryReservationCommandService {
             String idempotencyKey,
             CreateInventoryReservationRequest request
     ) {
-        var commandTimer = inventoryMetrics.startCommandTimer();
-        try {
-            CreateInventoryReservationRequest normalizedRequest = new CreateInventoryReservationRequest(
-                    request.orderReference().trim(),
-                    normalize(request.nodeId()),
-                    normalize(request.sku()),
-                    request.quantity()
-            );
-            String requestHash =
-                    requestHashService.hash(Map.of("operationType", CREATE_OPERATION_TYPE, "request", normalizedRequest));
+        CreateInventoryReservationRequest normalizedRequest = new CreateInventoryReservationRequest(
+                request.orderReference().trim(),
+                normalize(request.nodeId()),
+                normalize(request.sku()),
+                request.quantity()
+        );
+        String requestHash = requestHashService.hash(Map.of("operationType", CREATE_OPERATION_TYPE, "request", normalizedRequest));
 
-            IdempotentCommandResult<InventoryReservationResponse> result = inventoryCommandIdempotencyService
-                    .resolveReplay(idempotencyKey, CREATE_OPERATION_TYPE, requestHash, InventoryReservationResponse.class)
-                    .orElseGet(() -> createReservationInternal(idempotencyKey, requestHash, normalizedRequest));
-
-            inventoryMetrics.recordCommand("create_reservation", result.replayed() ? "replayed" : "accepted", commandTimer);
-            return result;
-        } catch (RuntimeException exception) {
-            inventoryMetrics.recordCommand("create_reservation", "failed", commandTimer);
-            throw exception;
-        }
+        return inventoryCommandIdempotencyService
+                .resolveReplay(idempotencyKey, CREATE_OPERATION_TYPE, requestHash, InventoryReservationResponse.class)
+                .orElseGet(() -> createReservationInternal(idempotencyKey, requestHash, normalizedRequest));
     }
 
     @Transactional
@@ -106,24 +92,15 @@ public class InventoryReservationCommandService {
             UUID reservationId,
             ReservationActionRequest request
     ) {
-        var commandTimer = inventoryMetrics.startCommandTimer();
-        try {
-            String requestHash = requestHashService.hash(Map.of(
-                    "operationType", CONFIRM_OPERATION_TYPE,
-                    "reservationId", reservationId,
-                    "request", request
-            ));
+        String requestHash = requestHashService.hash(Map.of(
+                "operationType", CONFIRM_OPERATION_TYPE,
+                "reservationId", reservationId,
+                "request", request
+        ));
 
-            IdempotentCommandResult<InventoryReservationResponse> result = inventoryCommandIdempotencyService
-                    .resolveReplay(idempotencyKey, CONFIRM_OPERATION_TYPE, requestHash, InventoryReservationResponse.class)
-                    .orElseGet(() -> confirmReservationInternal(idempotencyKey, requestHash, reservationId, request));
-
-            inventoryMetrics.recordCommand("confirm_reservation", result.replayed() ? "replayed" : "accepted", commandTimer);
-            return result;
-        } catch (RuntimeException exception) {
-            inventoryMetrics.recordCommand("confirm_reservation", "failed", commandTimer);
-            throw exception;
-        }
+        return inventoryCommandIdempotencyService
+                .resolveReplay(idempotencyKey, CONFIRM_OPERATION_TYPE, requestHash, InventoryReservationResponse.class)
+                .orElseGet(() -> confirmReservationInternal(idempotencyKey, requestHash, reservationId, request));
     }
 
     @Transactional
@@ -132,24 +109,15 @@ public class InventoryReservationCommandService {
             UUID reservationId,
             ReservationActionRequest request
     ) {
-        var commandTimer = inventoryMetrics.startCommandTimer();
-        try {
-            String requestHash = requestHashService.hash(Map.of(
-                    "operationType", RELEASE_OPERATION_TYPE,
-                    "reservationId", reservationId,
-                    "request", request
-            ));
+        String requestHash = requestHashService.hash(Map.of(
+                "operationType", RELEASE_OPERATION_TYPE,
+                "reservationId", reservationId,
+                "request", request
+        ));
 
-            IdempotentCommandResult<InventoryReservationResponse> result = inventoryCommandIdempotencyService
-                    .resolveReplay(idempotencyKey, RELEASE_OPERATION_TYPE, requestHash, InventoryReservationResponse.class)
-                    .orElseGet(() -> releaseReservationInternal(idempotencyKey, requestHash, reservationId, request));
-
-            inventoryMetrics.recordCommand("release_reservation", result.replayed() ? "replayed" : "accepted", commandTimer);
-            return result;
-        } catch (RuntimeException exception) {
-            inventoryMetrics.recordCommand("release_reservation", "failed", commandTimer);
-            throw exception;
-        }
+        return inventoryCommandIdempotencyService
+                .resolveReplay(idempotencyKey, RELEASE_OPERATION_TYPE, requestHash, InventoryReservationResponse.class)
+                .orElseGet(() -> releaseReservationInternal(idempotencyKey, requestHash, reservationId, request));
     }
 
     private IdempotentCommandResult<InventoryReservationResponse> createReservationInternal(

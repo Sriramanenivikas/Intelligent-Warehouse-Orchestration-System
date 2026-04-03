@@ -4,23 +4,7 @@
 # Example:
 # - labels:
 #     job: local-services
-#     service_name: order-intake-service
+#     service: order-intake-service
 #   targets:
 #     - host.docker.internal:8081
-- labels:
-    job: local-services
-    service_name: order-intake-service
-  targets:
-    - host.docker.internal:8081
-
-- labels:
-    job: local-services
-    service_name: inventory-ledger-service
-  targets:
-    - host.docker.internal:8082
-
-- labels:
-    job: local-services
-    service_name: order-orchestrator-service
-  targets:
-    - host.docker.internal:8083
+[]

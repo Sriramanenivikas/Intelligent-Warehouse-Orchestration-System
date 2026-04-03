@@ -1,7 +1,6 @@
 package com.iwos.inventoryledger.infrastructure.persistence.repository;
 
 import com.iwos.inventoryledger.infrastructure.persistence.entity.InventoryReservationEntity;
-import com.iwos.inventoryledger.domain.reservation.InventoryReservationStatus;
 import java.util.Optional;
 import java.util.UUID;
 import jakarta.persistence.LockModeType;
@@ -10,8 +9,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 public interface InventoryReservationRepository extends JpaRepository<InventoryReservationEntity, UUID> {
-
-    long countByStatus(InventoryReservationStatus status);
 
     Optional<InventoryReservationEntity> findByReservationId(UUID reservationId);
 

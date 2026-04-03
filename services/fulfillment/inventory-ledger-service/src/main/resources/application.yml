@@ -13,15 +13,6 @@ spring:
       timeout: 2s
       repositories:
         enabled: false
-  kafka:
-    bootstrap-servers: ${INVENTORY_LEDGER_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    template:
-      observation-enabled: true
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      acks: all
-      retries: 3
   flyway:
     enabled: true
     table: inventory_ledger_flyway_schema_history
@@ -44,22 +35,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
         enabled: true
-  metrics:
-    tags:
-      service: ${spring.application.name}
-      env: ${SPRING_PROFILES_ACTIVE:local}
-    distribution:
-      percentiles-histogram:
-        http:
-          server:
-            requests: true
-          client:
-            requests: true
   tracing:
     sampling:
       probability: 1.0
@@ -75,7 +55,3 @@ iwos:
   inventory-ledger:
     idempotency-cache-ttl: PT24H
     reservation-ttl: PT15M
-    outbox:
-      topic: iwos.inventory.events.v1
-      poll-interval: PT5S
-      batch-size: 50

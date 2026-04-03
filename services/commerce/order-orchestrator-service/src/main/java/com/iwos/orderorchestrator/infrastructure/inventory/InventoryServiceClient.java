@@ -2,7 +2,6 @@ package com.iwos.orderorchestrator.infrastructure.inventory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iwos.orderorchestrator.infrastructure.config.OrderOrchestratorServiceProperties;
-import com.iwos.orderorchestrator.infrastructure.observability.OrderWorkflowMetrics;
 import java.io.IOException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -16,40 +15,31 @@ public class InventoryServiceClient {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final OrderWorkflowMetrics orderWorkflowMetrics;
 
     public InventoryServiceClient(
-            RestClient.Builder restClientBuilder,
             OrderOrchestratorServiceProperties properties,
-            ObjectMapper objectMapper,
-            OrderWorkflowMetrics orderWorkflowMetrics
+            ObjectMapper objectMapper
     ) {
-        this.restClient = restClientBuilder
+        this.restClient = RestClient.builder()
                 .baseUrl(properties.getInventoryServiceBaseUrl())
                 .build();
         this.objectMapper = objectMapper;
-        this.orderWorkflowMetrics = orderWorkflowMetrics;
     }
 
     public InventoryReservationClientResponse createReservation(
             String idempotencyKey,
             InventoryCreateReservationRequest request
     ) {
-        var clientTimer = orderWorkflowMetrics.startInventoryClientTimer();
         try {
-            InventoryReservationClientResponse response = restClient.post()
+            return restClient.post()
                     .uri("/api/v1/reservations")
                     .header("Idempotency-Key", idempotencyKey)
                     .body(request)
                     .retrieve()
                     .body(InventoryReservationClientResponse.class);
-            orderWorkflowMetrics.recordInventoryClientCall("create_reservation", "success", clientTimer);
-            return response;
         } catch (RestClientResponseException exception) {
-            orderWorkflowMetrics.recordInventoryClientCall("create_reservation", "error", clientTimer);
             throw mapResponseException(exception);
         } catch (RestClientException exception) {
-            orderWorkflowMetrics.recordInventoryClientCall("create_reservation", "error", clientTimer);
             throw new InventoryServiceClientException(
                     HttpStatus.BAD_GATEWAY,
                     "Inventory service call failed while creating reservation",
@@ -63,21 +53,16 @@ public class InventoryServiceClient {
             String idempotencyKey,
             InventoryReservationActionRequest request
     ) {
-        var clientTimer = orderWorkflowMetrics.startInventoryClientTimer();
         try {
-            InventoryReservationClientResponse response = restClient.post()
+            return restClient.post()
                     .uri("/api/v1/reservations/{reservationId}/release", reservationId)
                     .header("Idempotency-Key", idempotencyKey)
                     .body(request)
                     .retrieve()
                     .body(InventoryReservationClientResponse.class);
-            orderWorkflowMetrics.recordInventoryClientCall("release_reservation", "success", clientTimer);
-            return response;
         } catch (RestClientResponseException exception) {
-            orderWorkflowMetrics.recordInventoryClientCall("release_reservation", "error", clientTimer);
             throw mapResponseException(exception);
         } catch (RestClientException exception) {
-            orderWorkflowMetrics.recordInventoryClientCall("release_reservation", "error", clientTimer);
             throw new InventoryServiceClientException(
                     HttpStatus.BAD_GATEWAY,
                     "Inventory service call failed while releasing reservation",

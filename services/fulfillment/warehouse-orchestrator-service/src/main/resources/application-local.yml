@@ -2,21 +2,9 @@ spring:
   config:
     activate:
       on-profile: local
-  datasource:
-    url: jdbc:postgresql://localhost:55432/iwos
-    username: iwos
-    password: iwos_secret
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
-  otlp:
-    tracing:
-      endpoint: http://localhost:4318/v1/traces
-
-iwos:
-  warehouse-orchestrator:
-    order-orchestrator-base-url: http://localhost:8083
-    warehouse-code: DELHI-FC-01
+        include: health,info,prometheus

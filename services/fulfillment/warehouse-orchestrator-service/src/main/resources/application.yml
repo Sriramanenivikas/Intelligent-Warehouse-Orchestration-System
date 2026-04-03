@@ -1,85 +1,12 @@
 spring:
   application:
     name: warehouse-orchestrator-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
-  datasource:
-    url: ${WAREHOUSE_ORCHESTRATOR_DB_URL:jdbc:postgresql://localhost:55432/iwos}
-    username: ${WAREHOUSE_ORCHESTRATOR_DB_USERNAME:iwos}
-    password: ${WAREHOUSE_ORCHESTRATOR_DB_PASSWORD:iwos_secret}
-  kafka:
-    bootstrap-servers: ${WAREHOUSE_ORCHESTRATOR_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    listener:
-      observation-enabled: true
-    template:
-      observation-enabled: true
-    consumer:
-      group-id: warehouse-orchestrator-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      enable-auto-commit: false
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-      acks: all
-      retries: 3
-  flyway:
-    enabled: true
-    table: warehouse_orchestration_flyway_schema_history
-    default-schema: warehouse_orchestration
-    schemas: warehouse_orchestration
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        default_schema: warehouse_orchestration
-        jdbc:
-          time_zone: UTC
 
 server:
-  port: ${WAREHOUSE_ORCHESTRATOR_SERVER_PORT:8086}
+  port: 0
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      probes:
-        enabled: true
-  metrics:
-    tags:
-      service: ${spring.application.name}
-      env: ${SPRING_PROFILES_ACTIVE:local}
-    distribution:
-      percentiles-histogram:
-        http:
-          server:
-            requests: true
-          client:
-            requests: true
-  tracing:
-    sampling:
-      probability: 1.0
-  otlp:
-    tracing:
-      endpoint: ${WAREHOUSE_ORCHESTRATOR_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
-
-logging:
-  file:
-    name: ${WAREHOUSE_ORCHESTRATOR_LOG_FILE:logs/warehouse-orchestrator-service.log}
-
-iwos:
-  warehouse-orchestrator:
-    order-orchestrator-base-url: ${WAREHOUSE_ORCHESTRATOR_ORDER_ORCHESTRATOR_BASE_URL:http://localhost:8083}
-    warehouse-code: ${WAREHOUSE_ORCHESTRATOR_WAREHOUSE_CODE:DELHI-FC-01}
-    default-fulfillment-node-id: ${WAREHOUSE_ORCHESTRATOR_DEFAULT_FULFILLMENT_NODE_ID:NODE-DELHI-01}
-    kafka:
-      inbound-topic: ${WAREHOUSE_ORCHESTRATOR_INBOUND_TOPIC:iwos.order-orchestrator.events.v1}
-      outbox-topic: ${WAREHOUSE_ORCHESTRATOR_OUTBOX_TOPIC:iwos.warehouse-orchestrator.events.v1}
-      outbox-poll-interval: PT5S
-      outbox-batch-size: 50
+        include: health,info,prometheus
