@@ -16,3 +16,8 @@ Use this order:
 10. `api/api-governance.md`
 
 This docs set is the canonical source of truth for the production-style system we are planning.
+
+Additional architecture visuals for the current workspace:
+
+11. `architecture/iwos-architecture-hld-mermaid.md`
+12. `architecture/iwos-architecture-lld-mermaid.md`

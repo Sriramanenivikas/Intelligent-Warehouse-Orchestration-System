@@ -45,3 +45,39 @@ groups:
         annotations:
           summary: "No application scrape targets registered"
           description: "No future service metrics endpoints have been added to Prometheus file discovery."
+
+      - alert: LocalServiceDown
+        expr: up{job="local-services"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Local service down"
+          description: "The local service {{ $labels.service_name }} is not reachable on its Prometheus endpoint."
+
+      - alert: OrderIntakeOutboxBacklog
+        expr: iwos_order_intake_outbox_pending > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Order intake outbox backlog"
+          description: "Order intake still has pending outbox events after 10 minutes."
+
+      - alert: OrderWorkflowOutboxBacklog
+        expr: iwos_order_workflow_outbox_pending > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Order workflow outbox backlog"
+          description: "Order orchestrator still has pending outbox events after 10 minutes."
+
+      - alert: InventoryOutboxBacklog
+        expr: iwos_inventory_outbox_pending > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Inventory outbox backlog"
+          description: "Inventory ledger still has pending outbox events after 10 minutes."

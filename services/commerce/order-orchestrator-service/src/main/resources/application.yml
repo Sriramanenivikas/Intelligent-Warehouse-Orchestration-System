@@ -5,6 +5,22 @@ spring:
     url: ${ORDER_ORCHESTRATOR_DB_URL:jdbc:postgresql://localhost:55432/iwos}
     username: ${ORDER_ORCHESTRATOR_DB_USERNAME:iwos}
     password: ${ORDER_ORCHESTRATOR_DB_PASSWORD:iwos_secret}
+  kafka:
+    bootstrap-servers: ${ORDER_ORCHESTRATOR_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      observation-enabled: true
+    template:
+      observation-enabled: true
+    consumer:
+      group-id: order-orchestrator-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
   flyway:
     enabled: true
     table: order_orchestration_flyway_schema_history
@@ -27,11 +43,22 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       probes:
         enabled: true
+  metrics:
+    tags:
+      service: ${spring.application.name}
+      env: ${SPRING_PROFILES_ACTIVE:local}
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+          client:
+            requests: true
   tracing:
     sampling:
       probability: 1.0
@@ -48,3 +75,6 @@ iwos:
     inventory-service-base-url: ${ORDER_ORCHESTRATOR_INVENTORY_SERVICE_BASE_URL:http://localhost:8082}
     default-fulfillment-node-id: ${ORDER_ORCHESTRATOR_DEFAULT_FULFILLMENT_NODE_ID:NODE-DELHI-01}
     pending-fetch-limit: ${ORDER_ORCHESTRATOR_PENDING_FETCH_LIMIT:25}
+    kafka:
+      order-intake-topic: iwos.order-intake.accepted.v1
+      outbox-topic: iwos.order-orchestrator.events.v1
