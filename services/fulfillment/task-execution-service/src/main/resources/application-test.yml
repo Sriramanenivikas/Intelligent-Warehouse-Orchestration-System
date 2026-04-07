@@ -3,6 +3,25 @@ spring:
     activate:
       on-profile: test
 
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos_test
+    username: iwos
+    password: iwos_secret
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+task-execution-service:
+  warehouse:
+    base-url: http://localhost:8086
+  inventory:
+    base-url: http://localhost:8082
+
 logging:
   level:
     root: WARN
+    com.iwos.taskexecution: DEBUG
