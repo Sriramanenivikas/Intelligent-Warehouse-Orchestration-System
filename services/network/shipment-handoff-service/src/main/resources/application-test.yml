@@ -1,0 +1,27 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos_test
+    username: iwos
+    password: iwos_secret
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+shipment-handoff-service:
+  warehouse:
+    base-url: http://localhost:8086
+  order-intake:
+    base-url: http://localhost:8081
+
+logging:
+  level:
+    root: WARN
+    com.iwos.shipmenthandoff: DEBUG
