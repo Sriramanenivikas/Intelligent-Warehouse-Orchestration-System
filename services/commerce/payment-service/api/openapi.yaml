@@ -1,6 +1,172 @@
 openapi: 3.1.0
 info:
-  title: payment-service API
-  version: 0.1.0
-  description: Planning skeleton only. No endpoints implemented yet.
-paths: {}
+  title: payment-service
+  version: 1.0.0
+  description: Payment authorization and status service.
+servers:
+  - url: http://localhost:8085
+paths:
+  /api/v1/payments:
+    post:
+      summary: Authorize a payment attempt
+      operationId: createPayment
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '202':
+          description: Payment authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+  /api/v1/payments/{paymentId}:
+    get:
+      summary: Fetch payment state
+      operationId: getPayment
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+  /api/v1/payments/{paymentId}/success:
+    post:
+      summary: Mark payment successful
+      operationId: markPaymentSuccess
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentActionRequest'
+      responses:
+        '200':
+          description: Payment marked successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+  /api/v1/payments/{paymentId}/fail:
+    post:
+      summary: Mark payment failed
+      operationId: markPaymentFailed
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentActionRequest'
+      responses:
+        '200':
+          description: Payment marked failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+components:
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required:
+        - orderIntentId
+        - orderWorkflowId
+        - customerId
+        - paymentMode
+        - currency
+        - totalAmount
+      properties:
+        orderIntentId:
+          type: string
+          format: uuid
+        orderWorkflowId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+        paymentMode:
+          type: string
+        currency:
+          type: string
+        totalAmount:
+          type: number
+    PaymentActionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: string
+    PaymentResponse:
+      type: object
+      properties:
+        paymentIntentId:
+          type: string
+          format: uuid
+        orderIntentId:
+          type: string
+          format: uuid
+        orderWorkflowId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+        paymentMode:
+          type: string
+        currency:
+          type: string
+        totalAmount:
+          type: number
+        capturedAmount:
+          type: number
+        providerName:
+          type: string
+        providerReference:
+          type: string
+        status:
+          type: string
+        failureReason:
+          type: string

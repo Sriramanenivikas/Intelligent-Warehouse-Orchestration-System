@@ -1,8 +1,2 @@
-spring:
-  config:
-    activate:
-      on-profile: test
-
-logging:
-  level:
-    root: WARN
+server:
+  port: 0

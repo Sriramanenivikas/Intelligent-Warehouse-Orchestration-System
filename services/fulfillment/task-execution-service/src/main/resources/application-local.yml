@@ -3,8 +3,15 @@ spring:
     activate:
       on-profile: local
 
+logging:
+  level:
+    com.iwos.taskexecution: DEBUG
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      env: local

@@ -17,6 +17,7 @@ public record OrderWorkflowResponse(
         Instant completedAt,
         Instant createdAt,
         Instant updatedAt,
+        OrderWorkflowPaymentResponse payment,
         List<OrderWorkflowReservationResponse> reservations
 ) {
 }

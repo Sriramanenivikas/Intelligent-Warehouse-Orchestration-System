@@ -41,6 +41,7 @@
         <module>services/fulfillment/returns-service</module>
 
         <module>services/network/shipment-network-service</module>
+        <module>services/network/shipment-handoff-service</module>
         <module>services/network/scan-event-service</module>
         <module>services/network/notification-service</module>
 

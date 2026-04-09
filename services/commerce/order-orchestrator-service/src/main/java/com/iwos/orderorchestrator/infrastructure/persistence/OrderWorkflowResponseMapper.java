@@ -2,6 +2,7 @@ package com.iwos.orderorchestrator.infrastructure.persistence;
 
 import com.iwos.orderorchestrator.api.http.OrderWorkflowReservationResponse;
 import com.iwos.orderorchestrator.api.http.OrderWorkflowResponse;
+import com.iwos.orderorchestrator.api.http.OrderWorkflowPaymentResponse;
 import com.iwos.orderorchestrator.infrastructure.persistence.entity.OrderWorkflowEntity;
 import java.util.Comparator;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,13 @@ public class OrderWorkflowResponseMapper {
                 workflow.getCompletedAt(),
                 workflow.getCreatedAt(),
                 workflow.getUpdatedAt(),
+                workflow.getPaymentStatus() == null && workflow.getPaymentIntentId() == null ? null : new OrderWorkflowPaymentResponse(
+                        workflow.getPaymentIntentId(),
+                        workflow.getPaymentStatus(),
+                        workflow.getPaymentProviderReference(),
+                        workflow.getPaymentFailureReason(),
+                        workflow.getPaymentProcessedAt()
+                ),
                 workflow.getReservations().stream()
                         .sorted(Comparator.comparing(reservation -> reservation.getCreatedAt() == null
                                 ? workflow.getCreatedAt()

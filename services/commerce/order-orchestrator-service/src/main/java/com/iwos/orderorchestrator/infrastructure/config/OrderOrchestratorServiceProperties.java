@@ -14,6 +14,12 @@ public class OrderOrchestratorServiceProperties {
     private String inventoryServiceBaseUrl = "http://localhost:8082";
 
     @NotBlank
+    private String promiseServiceBaseUrl = "http://localhost:8084";
+
+    @NotBlank
+    private String paymentServiceBaseUrl = "http://localhost:8085";
+
+    @NotBlank
     private String defaultFulfillmentNodeId = "NODE-DELHI-01";
 
     @Min(1)
@@ -26,6 +32,22 @@ public class OrderOrchestratorServiceProperties {
 
     public void setInventoryServiceBaseUrl(String inventoryServiceBaseUrl) {
         this.inventoryServiceBaseUrl = inventoryServiceBaseUrl;
+    }
+
+    public String getPromiseServiceBaseUrl() {
+        return promiseServiceBaseUrl;
+    }
+
+    public void setPromiseServiceBaseUrl(String promiseServiceBaseUrl) {
+        this.promiseServiceBaseUrl = promiseServiceBaseUrl;
+    }
+
+    public String getPaymentServiceBaseUrl() {
+        return paymentServiceBaseUrl;
+    }
+
+    public void setPaymentServiceBaseUrl(String paymentServiceBaseUrl) {
+        this.paymentServiceBaseUrl = paymentServiceBaseUrl;
     }
 
     public String getDefaultFulfillmentNodeId() {

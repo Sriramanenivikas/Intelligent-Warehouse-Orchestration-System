@@ -1,10 +1,2 @@
-spring:
-  config:
-    activate:
-      on-profile: local
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
+server:
+  port: 8085
