@@ -80,6 +80,7 @@ iwos:
     default-fulfillment-node-id: ${WAREHOUSE_ORCHESTRATOR_DEFAULT_FULFILLMENT_NODE_ID:NODE-DELHI-01}
     kafka:
       inbound-topic: ${WAREHOUSE_ORCHESTRATOR_INBOUND_TOPIC:iwos.order-orchestrator.events.v1}
+      task-execution-inbound-topic: ${WAREHOUSE_ORCHESTRATOR_TASK_EXECUTION_TOPIC:iwos.task-execution.events.v1}
       outbox-topic: ${WAREHOUSE_ORCHESTRATOR_OUTBOX_TOPIC:iwos.warehouse-orchestrator.events.v1}
       outbox-poll-interval: PT5S
       outbox-batch-size: 50

@@ -33,7 +33,7 @@ public class FulfillmentTaskEntity {
     private FulfillmentTaskType taskType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 16)
+    @Column(name = "status", nullable = false, length = 32)
     private FulfillmentTaskStatus status;
 
     @Column(name = "sequence_number", nullable = false)

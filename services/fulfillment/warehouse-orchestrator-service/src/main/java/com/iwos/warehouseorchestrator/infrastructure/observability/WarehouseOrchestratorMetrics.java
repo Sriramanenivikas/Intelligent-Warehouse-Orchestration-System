@@ -14,6 +14,9 @@ public class WarehouseOrchestratorMetrics {
     private final Counter inboundEventsFailed;
     private final Counter outboxPublished;
     private final Counter outboxFailed;
+    private final Counter taskStateUpdatesReceived;
+    private final Counter taskStateUpdatesApplied;
+    private final Counter taskStateUpdatesFailed;
 
     public WarehouseOrchestratorMetrics(MeterRegistry meterRegistry) {
         this.fulfillmentOrdersCreated = Counter.builder("warehouse.fulfillment_orders.created")
@@ -45,6 +48,18 @@ public class WarehouseOrchestratorMetrics {
                 .tag("outcome", "failed")
                 .description("Outbox events that failed Kafka publish")
                 .register(meterRegistry);
+
+        this.taskStateUpdatesReceived = Counter.builder("warehouse.task_state_updates.received")
+                .description("Task state update events received from task-execution")
+                .register(meterRegistry);
+
+        this.taskStateUpdatesApplied = Counter.builder("warehouse.task_state_updates.applied")
+                .description("Task state updates successfully applied")
+                .register(meterRegistry);
+
+        this.taskStateUpdatesFailed = Counter.builder("warehouse.task_state_updates.failed")
+                .description("Task state updates that failed")
+                .register(meterRegistry);
     }
 
     public void recordFulfillmentOrderCreated() {
@@ -74,4 +89,17 @@ public class WarehouseOrchestratorMetrics {
             outboxFailed.increment();
         }
     }
+
+    public void recordTaskStateUpdateReceived() {
+        taskStateUpdatesReceived.increment();
+    }
+
+    public void recordTaskStateUpdateApplied() {
+        taskStateUpdatesApplied.increment();
+    }
+
+    public void recordTaskStateUpdateFailed() {
+        taskStateUpdatesFailed.increment();
+    }
 }
+
