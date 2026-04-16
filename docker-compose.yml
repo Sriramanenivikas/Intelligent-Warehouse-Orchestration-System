@@ -52,7 +52,7 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
     ports:
-      - "8081:8081"
+      - "18081:8081"
 
   opensearch:
     image: opensearchproject/opensearch:2.17.0

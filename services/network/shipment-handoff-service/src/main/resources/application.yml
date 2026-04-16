@@ -75,7 +75,7 @@ management:
 shipment-handoff-service:
   service-name: shipment-handoff-service
   kafka:
-    consumer-topic: iwos.task-execution.events.v1
+    consumer-topic: iwos.warehouse-orchestrator.events.v1
     producer-topic: iwos.shipment-handoff.events.v1
     group-id: shipment-handoff-service-consumer
   warehouse:

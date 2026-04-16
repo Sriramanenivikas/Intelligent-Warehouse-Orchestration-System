@@ -67,6 +67,7 @@ public class WarehouseOrchestratorServiceProperties {
 
     public static class KafkaProperties {
         private String inboundTopic = "iwos.order-orchestrator.events.v1";
+        private String taskExecutionInboundTopic = "iwos.task-execution.events.v1";
         private String outboxTopic = "iwos.warehouse-orchestrator.events.v1";
         private String outboxPollInterval = "PT5S";
 
@@ -80,6 +81,14 @@ public class WarehouseOrchestratorServiceProperties {
 
         public void setInboundTopic(String inboundTopic) {
             this.inboundTopic = inboundTopic;
+        }
+
+        public String getTaskExecutionInboundTopic() {
+            return taskExecutionInboundTopic;
+        }
+
+        public void setTaskExecutionInboundTopic(String taskExecutionInboundTopic) {
+            this.taskExecutionInboundTopic = taskExecutionInboundTopic;
         }
 
         public String getOutboxTopic() {
