@@ -1,12 +1,64 @@
+server:
+  port: 8089
+  shutdown: graceful
+
 spring:
   application:
     name: shipment-network-service
-
-server:
-  port: 0
+  datasource:
+    url: ${SHIPMENT_NETWORK_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${SHIPMENT_NETWORK_DB_USERNAME:iwos}
+    password: ${SHIPMENT_NETWORK_DB_PASSWORD:iwos_secret}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: shipment_network
+    open-in-view: false
+  flyway:
+    enabled: true
+    schemas: shipment_network
+    default-schema: shipment_network
+    table: shipment_network_flyway_schema_history
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${SHIPMENT_NETWORK_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      service: shipment-network-service
+      env: ${APP_ENV:local}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+shipment-network-service:
+  service-name: shipment-network-service
+  kafka:
+    consumer-topic: ${SHIPMENT_NETWORK_CONSUMER_TOPIC:iwos.shipment-handoff.events.v1}
+    producer-topic: ${SHIPMENT_NETWORK_PRODUCER_TOPIC:iwos.shipment-network.events.v1}
+    group-id: ${SHIPMENT_NETWORK_CONSUMER_GROUP:shipment-network-service-consumer}
+  outbox:
+    poll-interval-ms: ${SHIPMENT_NETWORK_OUTBOX_POLL_INTERVAL_MS:1000}

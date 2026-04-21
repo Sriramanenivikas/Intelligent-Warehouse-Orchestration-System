@@ -1,12 +1,64 @@
 spring:
   application:
     name: notification-service
+  datasource:
+    url: ${NOTIFICATION_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${NOTIFICATION_DB_USERNAME:iwos}
+    password: ${NOTIFICATION_DB_PASSWORD:iwos_secret}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notification
+    open-in-view: false
+  flyway:
+    enabled: true
+    schemas: notification
+    default-schema: notification
+    table: notification_flyway_schema_history
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${NOTIFICATION_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 server:
-  port: 0
+  port: 8091
+  shutdown: graceful
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      service: notification-service
+      env: ${APP_ENV:local}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+notification-service:
+  service-name: notification-service
+  kafka:
+    consumer-topic: ${NOTIFICATION_CONSUMER_TOPIC:iwos.scan.events.v1}
+    producer-topic: ${NOTIFICATION_PRODUCER_TOPIC:iwos.notification.events.v1}
+    group-id: ${NOTIFICATION_CONSUMER_GROUP:notification-service-consumer}
+  outbox:
+    poll-interval-ms: ${NOTIFICATION_OUTBOX_POLL_INTERVAL_MS:1000}
