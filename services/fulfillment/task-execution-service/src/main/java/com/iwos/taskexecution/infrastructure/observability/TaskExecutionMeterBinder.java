@@ -24,27 +24,39 @@ public class TaskExecutionMeterBinder implements MeterBinder {
 
     @Override
     public void bindTo(MeterRegistry registry) {
-        Gauge.builder("task_execution_tasks_ready", taskRepository,
+        Gauge.builder("task_execution_tasks_current", taskRepository,
                         repo -> repo.findByStatusOrderBySourceCreatedAtAsc(
                                 TaskStatus.READY,
                                 org.springframework.data.domain.PageRequest.of(0, 10000)
                         ).size())
+                .tag("status", "READY")
                 .description("Number of tasks in READY status")
                 .register(registry);
 
-        Gauge.builder("task_execution_tasks_claimed", taskRepository,
+        Gauge.builder("task_execution_tasks_current", taskRepository,
+                        repo -> repo.findByStatusOrderBySourceCreatedAtAsc(
+                                TaskStatus.BLOCKED,
+                                org.springframework.data.domain.PageRequest.of(0, 10000)
+                        ).size())
+                .tag("status", "BLOCKED")
+                .description("Number of tasks in BLOCKED status")
+                .register(registry);
+
+        Gauge.builder("task_execution_tasks_current", taskRepository,
                         repo -> repo.findByStatusOrderBySourceCreatedAtAsc(
                                 TaskStatus.CLAIMED,
                                 org.springframework.data.domain.PageRequest.of(0, 10000)
                         ).size())
+                .tag("status", "CLAIMED")
                 .description("Number of tasks in CLAIMED status")
                 .register(registry);
 
-        Gauge.builder("task_execution_tasks_in_progress", taskRepository,
+        Gauge.builder("task_execution_tasks_current", taskRepository,
                         repo -> repo.findByStatusOrderBySourceCreatedAtAsc(
                                 TaskStatus.IN_PROGRESS,
                                 org.springframework.data.domain.PageRequest.of(0, 10000)
                         ).size())
+                .tag("status", "IN_PROGRESS")
                 .description("Number of tasks in IN_PROGRESS status")
                 .register(registry);
 

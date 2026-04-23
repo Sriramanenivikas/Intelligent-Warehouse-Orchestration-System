@@ -191,8 +191,10 @@ public class TaskExecutionService {
                 fulfillmentOrderId, TaskType.PICK, TaskStatus.CLAIMED);
         long inProgressPicks = taskRepository.countByFulfillmentOrderIdAndTaskTypeAndStatus(
                 fulfillmentOrderId, TaskType.PICK, TaskStatus.IN_PROGRESS);
+        long blockedPicks = taskRepository.countByFulfillmentOrderIdAndTaskTypeAndStatus(
+                fulfillmentOrderId, TaskType.PICK, TaskStatus.BLOCKED);
 
-        long incompletePicks = pendingPicks + claimedPicks + inProgressPicks;
+        long incompletePicks = pendingPicks + claimedPicks + inProgressPicks + blockedPicks;
 
         if (incompletePicks == 0) {
             // All PICKs done, unblock PACK task
@@ -200,13 +202,15 @@ public class TaskExecutionService {
                     fulfillmentOrderId, TaskType.PACK);
 
             for (TaskAssignmentEntity packTask : packTasks) {
-                if (packTask.getStatus() == TaskStatus.READY && packTask.getWorkerId() == null) {
-                    // PACK was blocked (represented as READY but blocked conceptually)
-                    // Now it can be claimed
+                if (packTask.getStatus() == TaskStatus.BLOCKED && packTask.getWorkerId() == null) {
+                    Instant now = Instant.now();
+                    packTask.setStatus(TaskStatus.READY);
+                    packTask.setUpdatedAt(now);
+                    taskRepository.save(packTask);
+
                     log.info("All PICK tasks completed. PACK task now available: fulfillmentOrderId={}, packTaskId={}",
                             fulfillmentOrderId, packTask.getTaskAssignmentId());
 
-                    // Create event for PACK unblocked
                     createOutboxEvent(packTask, "task-execution.pack-unblocked.v1", null);
                 }
             }
