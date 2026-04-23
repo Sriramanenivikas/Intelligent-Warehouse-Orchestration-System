@@ -25,18 +25,21 @@ public class ShipmentMeterBinder implements MeterBinder {
 
     @Override
     public void bindTo(MeterRegistry registry) {
-        Gauge.builder("shipment_handoff_shipments_created", shipmentRepository,
+        Gauge.builder("shipment_handoff_shipments_current", shipmentRepository,
                         repo -> repo.findByStatusOrderByCreatedAtDesc(ShipmentStatus.CREATED, PageRequest.of(0, 10000)).size())
+                .tag("status", "CREATED")
                 .description("Number of shipments in CREATED status")
                 .register(registry);
 
-        Gauge.builder("shipment_handoff_shipments_manifested", shipmentRepository,
+        Gauge.builder("shipment_handoff_shipments_current", shipmentRepository,
                         repo -> repo.findByStatusOrderByCreatedAtDesc(ShipmentStatus.MANIFESTED, PageRequest.of(0, 10000)).size())
+                .tag("status", "MANIFESTED")
                 .description("Number of shipments in MANIFESTED status")
                 .register(registry);
 
-        Gauge.builder("shipment_handoff_shipments_dispatched", shipmentRepository,
+        Gauge.builder("shipment_handoff_shipments_current", shipmentRepository,
                         repo -> repo.findByStatusOrderByCreatedAtDesc(ShipmentStatus.DISPATCHED, PageRequest.of(0, 10000)).size())
+                .tag("status", "DISPATCHED")
                 .description("Number of shipments in DISPATCHED status")
                 .register(registry);
 
