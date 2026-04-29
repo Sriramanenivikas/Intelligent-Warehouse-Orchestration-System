@@ -1,8 +1,7 @@
 spring:
-  config:
-    activate:
-      on-profile: test
-
-logging:
-  level:
-    root: WARN
+  datasource:
+    url: jdbc:postgresql://localhost:55432/iwos
+    username: iwos
+    password: iwos_secret
+  flyway:
+    enabled: false
