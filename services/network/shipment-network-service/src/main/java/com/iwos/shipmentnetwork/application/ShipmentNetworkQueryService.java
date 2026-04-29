@@ -42,7 +42,7 @@ public class ShipmentNetworkQueryService {
     @Transactional(readOnly = true)
     public NetworkShipmentResponse getByAwbNumber(String awbNumber) {
         return toResponse(shipmentRepository.findByAwbNumber(awbNumber)
-                .orElseThrow(() -> new IllegalArgumentException("Network shipment not found for AWB: " + awbNumber)));
+                .orElseThrow(() -> new NetworkShipmentNotFoundException("awbNumber", awbNumber)));
     }
 
     private NetworkShipmentResponse toResponse(NetworkShipmentEntity shipment) {

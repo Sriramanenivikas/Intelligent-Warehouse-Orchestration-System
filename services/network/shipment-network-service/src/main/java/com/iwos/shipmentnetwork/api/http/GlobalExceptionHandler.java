@@ -11,6 +11,8 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -46,6 +48,35 @@ public class GlobalExceptionHandler {
                 Instant.now(),
                 errors
         ));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> argumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String parameter = ex.getName();
+        String value = ex.getValue() != null ? ex.getValue().toString() : "null";
+        return ResponseEntity.badRequest().body(new ApiErrorResponse(
+                "INVALID_ARGUMENT",
+                "Invalid value for " + parameter + ": " + value,
+                requestId(),
+                Instant.now(),
+                Map.of(parameter, "Invalid value")
+        ));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> illegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(new ApiErrorResponse(
+                "INVALID_ARGUMENT",
+                ex.getMessage(),
+                requestId(),
+                Instant.now(),
+                Map.of()
+        ));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> noResourceFound(NoResourceFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "Resource not found");
     }
 
     @ExceptionHandler(Exception.class)

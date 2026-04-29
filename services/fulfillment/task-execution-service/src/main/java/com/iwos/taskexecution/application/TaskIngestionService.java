@@ -64,15 +64,8 @@ public class TaskIngestionService {
             entity.setOrderIntentId(fulfillment.orderIntentId());
             entity.setTaskType(TaskType.valueOf(task.taskType()));
 
-            // PACK starts as READY but conceptually blocked until all PICKs done
-            // We represent this by status=READY but worker apps should check PICK completion
             String sourceStatus = task.taskStatus();
-            if ("BLOCKED".equals(sourceStatus)) {
-                // Keep as READY in our system but PACK logic will handle sequencing
-                entity.setStatus(TaskStatus.READY);
-            } else {
-                entity.setStatus(TaskStatus.valueOf(sourceStatus));
-            }
+            entity.setStatus(TaskStatus.valueOf(sourceStatus));
 
             entity.setNodeId(task.nodeId());
             entity.setTaskTitle(task.taskTitle());
