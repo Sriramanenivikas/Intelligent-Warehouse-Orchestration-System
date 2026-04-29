@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: Inventory Ledger API
+  description: Authoritative stock, reservations, ATP, and stock ledger management
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8082
+    description: Local development
+
+tags:
+  - name: Inventory
+    description: Stock and reservation operations
+
+paths:
+  /api/v1/inventory/{skuId}:
+    get:
+      tags:
+        - Inventory
+      summary: Get current stock for a SKU
+      operationId: getStock
+      parameters:
+        - name: skuId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stock information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockResponse'
+        '404':
+          description: SKU not found
+
+  /api/v1/inventory/reserve:
+    post:
+      tags:
+        - Inventory
+      summary: Reserve inventory for an order
+      operationId: reserveInventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReserveRequest'
+      responses:
+        '200':
+          description: Inventory reserved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponse'
+        '400':
+          description: Invalid request or insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Insufficient inventory available
+
+  /api/v1/inventory/release:
+    post:
+      tags:
+        - Inventory
+      summary: Release reserved inventory
+      operationId: releaseInventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseRequest'
+      responses:
+        '200':
+          description: Inventory released
+
+components:
+  schemas:
+    StockResponse:
+      type: object
+      properties:
+        skuId:
+          type: string
+        totalStock:
+          type: integer
+        reserved:
+          type: integer
+        available:
+          type: integer
+        damaged:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReserveRequest:
+      type: object
+      required:
+        - orderId
+        - items
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              skuId:
+                type: string
+              quantity:
+                type: integer
+
+    ReservationResponse:
+      type: object
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+        status:
+          type: string
+          enum: [RESERVED, PARTIAL, FAILED]
+
+    ReleaseRequest:
+      type: object
+      required:
+        - reservationId
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+
+    ApiError:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        message:
+          type: string
