@@ -3,10 +3,70 @@ spring:
     name: identity-service
 
 server:
-  port: 0
+  port: 8092
+  shutdown: graceful
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      service: identity-service
+      env: ${APP_ENV:local}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+identity-service:
+  issuer: ${IDENTITY_ISSUER:http://localhost:8092}
+  audience: ${IDENTITY_AUDIENCE:iwos-platform}
+  token-ttl: ${IDENTITY_TOKEN_TTL:PT30M}
+  demo-principals:
+    - username: store.manager.blr
+      password: ${IDENTITY_DEMO_PASSWORD:demo-pass}
+      subject: user-store-manager-blr
+      role: STORE_MANAGER
+      region: ap-south-1
+      org-id: iwos-demo
+      node-ids:
+        - NODE-BLR-DS-01
+        - NODE-BLR-DS-02
+    - username: fc.operator.blr
+      password: ${IDENTITY_DEMO_PASSWORD:demo-pass}
+      subject: user-fc-operator-blr
+      role: FC_OPERATOR
+      region: ap-south-1
+      org-id: iwos-demo
+      node-ids:
+        - NODE-BLR-FC-01
+    - username: ops.admin
+      password: ${IDENTITY_DEMO_PASSWORD:demo-pass}
+      subject: user-ops-admin
+      role: OPS_ADMIN
+      region: ap-south-1
+      org-id: iwos-demo
+      node-ids:
+        - NODE-BLR-DS-01
+        - NODE-BLR-DS-02
+        - NODE-BLR-FC-01
+        - NODE-BLR-HUB-01
+    - username: planner.analyst
+      password: ${IDENTITY_DEMO_PASSWORD:demo-pass}
+      subject: user-planner-analyst
+      role: PLANNER_ANALYST
+      region: ap-south-1
+      org-id: iwos-demo
+      node-ids:
+        - NODE-BLR-DS-01
+        - NODE-BLR-DS-02
+        - NODE-BLR-FC-01
