@@ -2,6 +2,8 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: iwos-public
+  annotations:
+    konghq.com/plugins: iwos-request-id,iwos-rate-limit
 spec:
   parentRefs:
     - name: iwos-edge
@@ -9,4 +11,42 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /api/v1/order-intents
+      backendRefs:
+        - name: order-intake-service
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/fulfillment-orders
+      backendRefs:
+        - name: warehouse-orchestrator-service
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/shipments
+      backendRefs:
+        - name: shipment-handoff-service
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/network-shipments
+      backendRefs:
+        - name: shipment-network-service
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/scan-events
+      backendRefs:
+        - name: scan-event-service
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/notifications
+      backendRefs:
+        - name: notification-service
+          port: 8080
