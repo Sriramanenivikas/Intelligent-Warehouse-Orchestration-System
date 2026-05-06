@@ -1,6 +1,12 @@
 openapi: 3.1.0
 info:
   title: node-registry-service API
-  version: 0.1.0
-  description: Planning skeleton only. No endpoints implemented yet.
-paths: {}
+  version: 1.0.0
+  description: Fulfillment node registry read APIs.
+paths:
+  /api/v1/nodes:
+    get:
+      summary: List fulfillment nodes
+  /api/v1/nodes/{nodeId}:
+    get:
+      summary: Fetch a single fulfillment node
