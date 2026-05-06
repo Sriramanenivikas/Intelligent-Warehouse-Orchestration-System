@@ -1,9 +1,16 @@
 # node-registry-service
 
-Fulfillment node registry service skeleton
+Fulfillment node registry service
 
-Status:
+Provides the authoritative read API for fulfillment nodes used across the platform.
 
-- planning skeleton only
-- no implementation code yet
-- package structure reserved for future development
+Implemented endpoints:
+
+- `GET /api/v1/nodes`
+- `GET /api/v1/nodes/{nodeId}`
+
+Supported filters:
+
+- `type`
+- `city`
+- `active`
