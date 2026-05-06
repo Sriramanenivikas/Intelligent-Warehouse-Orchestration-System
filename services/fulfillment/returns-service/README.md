@@ -1,9 +1,11 @@
 # returns-service
 
-Reverse logistics service skeleton
+Reverse logistics service
 
-Status:
+Implemented endpoints:
 
-- planning skeleton only
-- no implementation code yet
-- package structure reserved for future development
+- `POST /api/v1/returns`
+- `GET /api/v1/returns`
+- `GET /api/v1/returns/{returnRequestId}`
+- `POST /api/v1/returns/{returnRequestId}/approve`
+- `POST /api/v1/returns/{returnRequestId}/receive`
