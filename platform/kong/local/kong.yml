@@ -1,0 +1,86 @@
+_format_version: "3.0"
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: x-request-id
+      generator: uuid
+
+services:
+  - name: order-intake-service
+    url: http://host.docker.internal:8081
+    routes:
+      - name: order-intake-route
+        paths:
+          - /api/v1/order-intents
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: warehouse-orchestrator-service
+    url: http://host.docker.internal:8086
+    routes:
+      - name: warehouse-orchestrator-route
+        paths:
+          - /api/v1/fulfillment-orders
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: shipment-handoff-service
+    url: http://host.docker.internal:8088
+    routes:
+      - name: shipment-handoff-route
+        paths:
+          - /api/v1/shipments
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: shipment-network-service
+    url: http://host.docker.internal:8089
+    routes:
+      - name: shipment-network-route
+        paths:
+          - /api/v1/network-shipments
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: scan-event-service
+    url: http://host.docker.internal:8090
+    routes:
+      - name: scan-event-route
+        paths:
+          - /api/v1/scan-events
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: notification-service
+    url: http://host.docker.internal:8091
+    routes:
+      - name: notification-route
+        paths:
+          - /api/v1/notifications
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
