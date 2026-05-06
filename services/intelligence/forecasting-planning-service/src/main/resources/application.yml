@@ -1,12 +1,55 @@
 spring:
   application:
     name: forecasting-planning-service
+  datasource:
+    url: ${FORECASTING_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${FORECASTING_DB_USERNAME:iwos}
+    password: ${FORECASTING_DB_PASSWORD:iwos_secret}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: forecasting_planning
+    open-in-view: false
+  flyway:
+    enabled: true
+    schemas: forecasting_planning
+    default-schema: forecasting_planning
+    table: forecasting_planning_flyway_schema_history
+    locations: classpath:db/migration
 
 server:
-  port: 0
+  port: 8093
+  shutdown: graceful
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      service: forecasting-planning-service
+      env: ${APP_ENV:local}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+forecasting-planning-service:
+  service-name: forecasting-planning-service
+  scheduler:
+    refresh-cron: ${FORECASTING_REFRESH_CRON:0 */15 * * * *}
+  model:
+    version: ${FORECASTING_MODEL_VERSION:weighted-demand-planner-v1}
+    lead-time-hours: ${FORECASTING_LEAD_TIME_HOURS:24}
+    safety-stock-hours: ${FORECASTING_SAFETY_STOCK_HOURS:6}
+    lookback-hours: ${FORECASTING_LOOKBACK_HOURS:24}
