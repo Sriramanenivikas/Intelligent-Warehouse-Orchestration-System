@@ -1,6 +1,20 @@
 openapi: 3.1.0
 info:
   title: returns-service API
-  version: 0.1.0
-  description: Planning skeleton only. No endpoints implemented yet.
-paths: {}
+  version: 1.0.0
+  description: Reverse logistics APIs for return request lifecycle.
+paths:
+  /api/v1/returns:
+    post:
+      summary: Create a return request
+    get:
+      summary: List return requests
+  /api/v1/returns/{returnRequestId}:
+    get:
+      summary: Fetch a return request
+  /api/v1/returns/{returnRequestId}/approve:
+    post:
+      summary: Approve a return request
+  /api/v1/returns/{returnRequestId}/receive:
+    post:
+      summary: Mark a return request as received
