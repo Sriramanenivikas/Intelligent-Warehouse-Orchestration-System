@@ -31,6 +31,9 @@ identity-service:
   issuer: ${IDENTITY_ISSUER:http://localhost:8092}
   audience: ${IDENTITY_AUDIENCE:iwos-platform}
   token-ttl: ${IDENTITY_TOKEN_TTL:PT30M}
+  key-id: ${IDENTITY_KEY_ID:iwos-demo-rs256-key}
+  private-key-location: ${IDENTITY_PRIVATE_KEY_LOCATION:classpath:keys/identity-private.pem}
+  public-key-location: ${IDENTITY_PUBLIC_KEY_LOCATION:classpath:keys/identity-public.pem}
   demo-principals:
     - username: store.manager.blr
       password: ${IDENTITY_DEMO_PASSWORD:demo-pass}

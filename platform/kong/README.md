@@ -25,3 +25,10 @@ Local proxy endpoints:
 - `http://localhost:8008/api/v1/network-shipments`
 - `http://localhost:8008/api/v1/scan-events`
 - `http://localhost:8008/api/v1/notifications`
+
+JWT auth model for local demo:
+
+- `order-intents` stays open for accept-path demo traffic
+- fulfillment, shipment, scan-event, and notification routes require `Authorization: Bearer <token>`
+- tokens are issued by `identity-service` on `http://localhost:8092/api/v1/auth/token`
+- Kong verifies `RS256` signatures with the pinned demo public key
