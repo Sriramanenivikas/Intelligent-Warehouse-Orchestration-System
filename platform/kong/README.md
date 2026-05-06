@@ -2,10 +2,33 @@
 
 This folder holds the north-south edge gateway structure.
 
-Planned contents:
+Current contents:
 
-- Gateway API manifests
-- edge auth and rate limit policy
-- environment overlays
-- plugin configuration
-- consumer and partner policy definitions
+- `gateway-api/`
+  Production-shaped Gateway API manifests for Kubernetes and Kong Ingress Controller.
+- `plugins/`
+  Shared Kong plugin manifests for request ID, authn, and rate limiting.
+- `local/kong.yml`
+  Local DB-less Kong config for demo routing across the core service flow.
+
+Local demo use:
+
+```bash
+docker compose -f docker-compose.gateway.yml up -d
+```
+
+Local proxy endpoints:
+
+- `http://localhost:8008/api/v1/order-intents`
+- `http://localhost:8008/api/v1/fulfillment-orders`
+- `http://localhost:8008/api/v1/shipments`
+- `http://localhost:8008/api/v1/network-shipments`
+- `http://localhost:8008/api/v1/scan-events`
+- `http://localhost:8008/api/v1/notifications`
+
+JWT auth model for local demo:
+
+- `order-intents` stays open for accept-path demo traffic
+- fulfillment, shipment, scan-event, and notification routes require `Authorization: Bearer <token>`
+- tokens are issued by `identity-service` on `http://localhost:8092/api/v1/auth/token`
+- Kong verifies `RS256` signatures with the pinned demo public key

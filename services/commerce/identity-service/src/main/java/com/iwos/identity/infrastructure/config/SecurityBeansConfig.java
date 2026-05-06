@@ -8,7 +8,11 @@ import org.springframework.context.annotation.Configuration;
 public class SecurityBeansConfig {
 
     @Bean
-    public RsaKeyMaterial rsaKeyMaterial() {
-        return RsaKeyMaterial.generate();
+    public RsaKeyMaterial rsaKeyMaterial(IdentityServiceProperties properties) {
+        return RsaKeyMaterial.load(
+                properties.keyId(),
+                properties.privateKeyLocation(),
+                properties.publicKeyLocation()
+        );
     }
 }
