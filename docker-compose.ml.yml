@@ -1,0 +1,49 @@
+services:
+  mlflow:
+    build:
+      context: ./ml/forecasting
+      dockerfile: Dockerfile
+    container_name: iwos-mlflow
+    restart: unless-stopped
+    command:
+      - mlflow
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --artifacts-destination
+      - /mlflow/artifacts
+      - --serve-artifacts
+      - --allowed-hosts
+      - mlflow:5000,iwos-mlflow:5000,localhost:*,127.0.0.1:*,host.docker.internal:*
+    ports:
+      - "5005:5000"
+    volumes:
+      - mlflow-data:/mlflow
+
+  forecasting-trainer:
+    build:
+      context: ./ml/forecasting
+      dockerfile: Dockerfile
+    container_name: iwos-forecasting-trainer
+    restart: unless-stopped
+    depends_on:
+      - mlflow
+    command:
+      - python
+      - /app/src/scheduler.py
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      FORECASTING_POSTGRES_DSN: postgresql+psycopg2://iwos:iwos_secret@host.docker.internal:55432/iwos
+      FORECASTING_MODEL_NAME: inventory-demand-forecast
+      FORECASTING_MODEL_ALIAS: champion
+      FORECASTING_PREDICTION_HORIZON_MINUTES: "15"
+      FORECASTING_TRAINING_INTERVAL_SECONDS: "900"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  mlflow-data:

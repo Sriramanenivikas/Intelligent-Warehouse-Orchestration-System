@@ -48,6 +48,8 @@ forecasting-planning-service:
   service-name: forecasting-planning-service
   scheduler:
     refresh-cron: ${FORECASTING_REFRESH_CRON:0 */15 * * * *}
+  pipeline:
+    mode: ${FORECASTING_PIPELINE_MODE:HEURISTIC}
   model:
     version: ${FORECASTING_MODEL_VERSION:weighted-demand-planner-v1}
     lead-time-hours: ${FORECASTING_LEAD_TIME_HOURS:24}

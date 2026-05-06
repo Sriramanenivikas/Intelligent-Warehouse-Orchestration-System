@@ -1,12 +1,16 @@
 package com.iwos.forecasting.application;
 
 import com.iwos.forecasting.api.http.ForecastRunResponse;
+import com.iwos.forecasting.api.http.ForecastModelRunResponse;
 import com.iwos.forecasting.api.http.InventoryForecastResponse;
+import com.iwos.forecasting.domain.ForecastModelRunNotFoundException;
 import com.iwos.forecasting.domain.ForecastNotFoundException;
 import com.iwos.forecasting.domain.ForecastRunNotFoundException;
 import com.iwos.forecasting.infrastructure.persistence.ForecastResponseMapper;
+import com.iwos.forecasting.infrastructure.persistence.entity.ForecastModelRunEntity;
 import com.iwos.forecasting.infrastructure.persistence.entity.ForecastRunEntity;
 import com.iwos.forecasting.infrastructure.persistence.entity.InventoryForecastEntity;
+import com.iwos.forecasting.infrastructure.persistence.repository.ForecastModelRunRepository;
 import com.iwos.forecasting.infrastructure.persistence.repository.ForecastRunRepository;
 import com.iwos.forecasting.infrastructure.persistence.repository.InventoryForecastRepository;
 import java.util.List;
@@ -19,15 +23,18 @@ public class ForecastQueryService {
 
     private final InventoryForecastRepository forecastRepository;
     private final ForecastRunRepository runRepository;
+    private final ForecastModelRunRepository modelRunRepository;
     private final ForecastResponseMapper mapper;
 
     public ForecastQueryService(
             InventoryForecastRepository forecastRepository,
             ForecastRunRepository runRepository,
+            ForecastModelRunRepository modelRunRepository,
             ForecastResponseMapper mapper
     ) {
         this.forecastRepository = forecastRepository;
         this.runRepository = runRepository;
+        this.modelRunRepository = modelRunRepository;
         this.mapper = mapper;
     }
 
@@ -52,5 +59,12 @@ public class ForecastQueryService {
         ForecastRunEntity run = runRepository.findTopByOrderByStartedAtDesc()
                 .orElseThrow(ForecastRunNotFoundException::new);
         return mapper.toRunResponse(run);
+    }
+
+    @Transactional(readOnly = true)
+    public ForecastModelRunResponse getLatestModelRun() {
+        ForecastModelRunEntity modelRun = modelRunRepository.findTopByOrderByTrainingCompletedAtDescCreatedAtDesc()
+                .orElseThrow(ForecastModelRunNotFoundException::new);
+        return mapper.toModelRunResponse(modelRun);
     }
 }
