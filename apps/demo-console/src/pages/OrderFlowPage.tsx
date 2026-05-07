@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert,
+  Box,
   Button,
   Grid,
   LinearProgress,
+  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -14,28 +16,45 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { api, formatDateTime } from "../api";
+import { ApiError, api, formatDateTime } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/SectionCard";
 import { StatusChip } from "../components/StatusChip";
+
+const demoSkuOptions = [
+  { sku: "SKU-TEST-FLOW-01", label: "Test Flow SKU", note: "High demo stock" },
+  { sku: "SKU-MANGO-1KG", label: "Mango 1KG", note: "Good available stock" },
+  { sku: "SKU-GRAPE-500G", label: "Grape 500G", note: "Good available stock" },
+  { sku: "SKU-BANANA-1DOZEN", label: "Banana 1 Dozen", note: "Limited demo stock" },
+  { sku: "SKU-APPLE-1KG", label: "Apple 1KG", note: "Often exhausted during tests" },
+];
 
 const defaultOrder = {
   customerId: "customer-001",
   channel: "APP",
   paymentMode: "PREPAID",
   currency: "INR",
-  totalAmount: "899.00",
-  sku: "SKU-APPLE-1KG",
-  quantity: "2",
+  totalAmount: "299.00",
+  sku: "SKU-TEST-FLOW-01",
+  quantity: "1",
   city: "Bengaluru",
   state: "Karnataka",
   postalCode: "560001",
 };
 
+const stageActions = [
+  { key: "submit", label: "Submit Order Intent", tone: "contained" as const },
+  { key: "workflow", label: "Process Workflow", tone: "outlined" as const },
+  { key: "fulfillment", label: "Create Fulfillment", tone: "contained" as const },
+  { key: "shipment", label: "Create Shipment", tone: "outlined" as const },
+  { key: "manifest", label: "Manifest Shipment", tone: "contained" as const },
+];
+
 export function OrderFlowPage({ token }: { token: string }) {
   const [form, setForm] = useState(defaultOrder);
   const [orderIntentId, setOrderIntentId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [flowWarning, setFlowWarning] = useState<string | null>(null);
 
   const idempotencyKey = useMemo(() => `iwos-demo-${Date.now()}`, [orderIntentId]);
 
@@ -66,6 +85,7 @@ export function OrderFlowPage({ token }: { token: string }) {
     onSuccess: (response) => {
       setOrderIntentId(response.orderIntentId);
       setMessage(`Accepted order intent ${response.orderIntentId}`);
+      setFlowWarning(null);
     },
   });
 
@@ -77,7 +97,13 @@ export function OrderFlowPage({ token }: { token: string }) {
       return api.processOrderWorkflow(orderIntentId, token);
     },
     onSuccess: (response) => {
-      setMessage(`Workflow ${response.workflowId} moved to ${response.status}`);
+      if (response.status.includes("FAILED")) {
+        setFlowWarning(response.failureReason ?? `Workflow entered ${response.status}`);
+        setMessage(`Workflow ${response.workflowId} ended in ${response.status}`);
+      } else {
+        setFlowWarning(null);
+        setMessage(`Workflow ${response.workflowId} moved to ${response.status}`);
+      }
       workflowQuery.refetch();
     },
   });
@@ -204,28 +230,77 @@ export function OrderFlowPage({ token }: { token: string }) {
     manifestShipment.isError ||
     recordScan.isError;
 
+  const mutationErrorDetail =
+    [createOrder.error, processWorkflow.error, processFulfillment.error, createShipment.error, manifestShipment.error, recordScan.error]
+      .find(Boolean);
+
+  const mutationErrorMessage =
+    mutationErrorDetail instanceof ApiError
+      ? typeof mutationErrorDetail.details === "object" && mutationErrorDetail.details !== null && "message" in mutationErrorDetail.details
+        ? String((mutationErrorDetail.details as { message?: unknown }).message ?? mutationErrorDetail.message)
+        : mutationErrorDetail.message
+      : mutationErrorDetail instanceof Error
+        ? mutationErrorDetail.message
+        : null;
+
+  const stages = [
+    {
+      label: "Order Intent",
+      status: orderQuery.data ? "ACCEPTED" : "PENDING",
+      ref: orderQuery.data?.orderIntentId ?? "Awaiting intent",
+      helper: formatDateTime(orderQuery.data?.acceptedAt),
+    },
+    {
+      label: "Workflow",
+      status: workflowQuery.data?.status ?? "PENDING",
+      ref: workflowQuery.data?.workflowId ?? "Awaiting workflow",
+      helper: workflowQuery.data?.failureReason ?? formatDateTime(workflowQuery.data?.updatedAt),
+    },
+    {
+      label: "Fulfillment",
+      status: fulfillmentQuery.data?.status ?? "PENDING",
+      ref: fulfillmentQuery.data?.fulfillmentOrderId ?? "Awaiting fulfillment",
+      helper: fulfillmentQuery.data?.warehouseCode ?? formatDateTime(fulfillmentQuery.data?.updatedAt),
+    },
+    {
+      label: "Shipment",
+      status: shipmentQuery.data?.status ?? "PENDING",
+      ref: shipmentQuery.data?.awbNumber ?? "Awaiting shipment",
+      helper: shipmentQuery.data?.originNodeId ?? formatDateTime(shipmentQuery.data?.updatedAt),
+    },
+    {
+      label: "Tracking",
+      status: timelineQuery.data?.currentStatus ?? "PENDING",
+      ref: timelineQuery.data?.lastScanType ?? "Awaiting network scan",
+      helper: formatDateTime(timelineQuery.data?.updatedAt),
+    },
+  ];
+
   return (
     <Stack spacing={3}>
-      <PageHeader
-        badges={[
-          { label: "Order Intake", color: "primary" },
-          { label: "Warehouse", color: "secondary" },
-          { label: "Shipment + Notifications", color: "success" },
-        ]}
-        description="Drive one realistic demo path: accept an order intent, process the order workflow, allocate fulfillment, create a shipment, and record network scans that feed timeline and notifications."
-        eyebrow="Operational Demo"
-        title="Order Flow Console"
-      />
+      <Box sx={{ animation: "fadeUp 420ms ease both" }}>
+        <PageHeader
+          badges={[
+            { label: "Order Intake", color: "primary" },
+            { label: "Warehouse", color: "secondary" },
+            { label: "Shipment + Notifications", color: "success" },
+          ]}
+          description="Run the exact demo path in production order. The workflow, reservation, fulfillment, shipment, and tracking states below are all backed by live services, not mocked frontend state."
+          eyebrow="Execution Flow"
+          title="Order Flow Command"
+        />
+      </Box>
 
-      {anyError ? <Alert severity="error">One of the flow actions failed. Check the latest stage and retry from the next valid action.</Alert> : null}
+      {anyError ? <Alert severity="error">{mutationErrorMessage ?? "One of the flow actions failed. Check the latest stage and retry from the next valid action."}</Alert> : null}
+      {flowWarning ? <Alert severity="warning">{flowWarning}</Alert> : null}
       {message ? <Alert severity="success">{message}</Alert> : null}
       {createOrder.isPending || processWorkflow.isPending || processFulfillment.isPending || createShipment.isPending || manifestShipment.isPending || recordScan.isPending ? (
         <LinearProgress />
       ) : null}
 
       <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, xl: 4 }}>
-          <SectionCard subtitle="Use one compact order form to seed the entire orchestration flow." title="Create Demo Order">
+        <Grid size={{ xs: 12, xl: 4 }} sx={{ animation: "fadeUp 520ms ease both" }}>
+          <SectionCard subtitle="Create one safe demo order and drive it stage by stage." title="Execution Rail">
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
                 <TextField
@@ -235,13 +310,20 @@ export function OrderFlowPage({ token }: { token: string }) {
                   value={form.customerId}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
-                  label="SKU"
+                  label="Demo SKU"
                   onChange={(event) => setForm((current) => ({ ...current, sku: event.target.value }))}
+                  select
                   value={form.sku}
-                />
+                >
+                  {demoSkuOptions.map((option) => (
+                    <MenuItem key={option.sku} value={option.sku}>
+                      {option.label} · {option.note}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
@@ -259,73 +341,102 @@ export function OrderFlowPage({ token }: { token: string }) {
                   value={form.totalAmount}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  fullWidth
-                  label="City"
-                  onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
-                  value={form.city}
-                />
-              </Grid>
             </Grid>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <Button fullWidth onClick={() => createOrder.mutate()} variant="contained">
-                {createOrder.isPending ? "Submitting..." : "Submit Order Intent"}
-              </Button>
-              <Button
-                disabled={!orderIntentId}
-                fullWidth
-                onClick={() => processWorkflow.mutate()}
-                variant="outlined"
-              >
-                {processWorkflow.isPending ? "Processing..." : "Process Workflow"}
-              </Button>
+            <Alert severity="info">
+              Preferred demo SKUs: `Test Flow`, `Mango 1KG`, `Grape 500G`. Avoid `Apple 1KG` after repeated runs because inventory is often exhausted.
+            </Alert>
+
+            <Stack spacing={1.25}>
+              {stageActions.map((action) => {
+                const handlerByKey = {
+                  submit: () => createOrder.mutate(),
+                  workflow: () => processWorkflow.mutate(),
+                  fulfillment: () => processFulfillment.mutate(),
+                  shipment: () => createShipment.mutate(),
+                  manifest: () => manifestShipment.mutate(),
+                };
+
+                const disabledByKey = {
+                  submit: false,
+                  workflow: !orderIntentId,
+                  fulfillment: !orderIntentId,
+                  shipment: !fulfillmentQuery.data,
+                  manifest: !shipmentQuery.data,
+                };
+
+                return (
+                  <Button
+                    disabled={disabledByKey[action.key as keyof typeof disabledByKey]}
+                    key={action.key}
+                    onClick={handlerByKey[action.key as keyof typeof handlerByKey]}
+                    variant={action.tone}
+                  >
+                    {action.label}
+                  </Button>
+                );
+              })}
             </Stack>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <Button
-                disabled={!orderIntentId}
-                fullWidth
-                onClick={() => processFulfillment.mutate()}
-                variant="contained"
-              >
-                {processFulfillment.isPending ? "Allocating..." : "Create Fulfillment"}
-              </Button>
-              <Button
-                disabled={!fulfillmentQuery.data}
-                fullWidth
-                onClick={() => createShipment.mutate()}
-                variant="outlined"
-              >
-                {createShipment.isPending ? "Creating..." : "Create Shipment"}
-              </Button>
-            </Stack>
-
-            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-              <Button
-                disabled={!shipmentQuery.data}
-                onClick={() => manifestShipment.mutate()}
-                variant="contained"
-              >
-                {manifestShipment.isPending ? "Manifesting..." : "Manifest Shipment"}
-              </Button>
-              {["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
-                <Button
-                  disabled={!networkShipmentQuery.data}
-                  key={scanType}
-                  onClick={() => recordScan.mutate(scanType)}
-                  variant="text"
-                >
-                  {scanType}
-                </Button>
-              ))}
-            </Stack>
+            <Box
+              sx={{
+                borderRadius: 4,
+                p: 2,
+                bgcolor: "rgba(15,94,168,0.05)",
+                border: "1px solid rgba(15,94,168,0.08)",
+              }}
+            >
+              <Typography fontWeight={800} sx={{ mb: 1 }} variant="body2">
+                Tracking transitions
+              </Typography>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                {["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
+                  <Button
+                    disabled={!networkShipmentQuery.data}
+                    key={scanType}
+                    onClick={() => recordScan.mutate(scanType)}
+                    variant="text"
+                  >
+                    {scanType.replaceAll("_", " ")}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
           </SectionCard>
         </Grid>
 
-        <Grid size={{ xs: 12, xl: 8 }}>
-          <SectionCard subtitle="Every stage shown here reflects real backend state from the running services." title="Lifecycle Timeline">
+        <Grid size={{ xs: 12, xl: 8 }} sx={{ animation: "fadeUp 620ms ease both" }}>
+          <SectionCard subtitle="Each block below is driven by the live backend state." title="Stage Board">
+            <Grid container spacing={2}>
+              {stages.map((stage, index) => (
+                <Grid key={stage.label} size={{ xs: 12, md: 6, xl: 4 }}>
+                  <Box
+                    sx={{
+                      height: "100%",
+                      borderRadius: 4,
+                      p: 2.25,
+                      border: "1px solid rgba(17,35,53,0.08)",
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244,248,252,0.92))",
+                      animation: `fadeUp ${680 + index * 70}ms ease both`,
+                    }}
+                  >
+                    <Stack spacing={1.1}>
+                      <Typography color="text.secondary" sx={{ letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 800 }} variant="caption">
+                        {stage.label}
+                      </Typography>
+                      <StatusChip value={stage.status} />
+                      <Typography fontWeight={800} variant="body2">
+                        {stage.ref}
+                      </Typography>
+                      <Typography color="text.secondary" variant="caption">
+                        {stage.helper}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -368,38 +479,52 @@ export function OrderFlowPage({ token }: { token: string }) {
                 </TableRow>
               </TableBody>
             </Table>
+          </SectionCard>
+        </Grid>
+      </Grid>
 
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, xl: 6 }} sx={{ animation: "fadeUp 760ms ease both" }}>
+          <SectionCard subtitle="Low-level workflow and reservation details from order-orchestrator." title="Workflow Details">
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography fontWeight={600} variant="subtitle2">
-                  Workflow details
+                <Typography color="text.secondary" variant="caption">
+                  Fulfillment node
                 </Typography>
-                <Typography color="text.secondary" variant="body2">
-                  Node {workflowQuery.data?.fulfillmentNodeId ?? "-"} · Customer {workflowQuery.data?.customerId ?? "-"}
-                </Typography>
-                <Typography color="text.secondary" variant="body2">
-                  Payment {workflowQuery.data?.payment?.status ?? "-"} · Reservations {workflowQuery.data?.reservations?.length ?? 0}
+                <Typography fontWeight={700} variant="body1">
+                  {workflowQuery.data?.fulfillmentNodeId ?? "-"}
                 </Typography>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography fontWeight={600} variant="subtitle2">
-                  Network and notification feed
+                <Typography color="text.secondary" variant="caption">
+                  Payment status
                 </Typography>
-                <Typography color="text.secondary" variant="body2">
-                  Network status {networkShipmentQuery.data?.status ?? "Pending"} · Last scan {networkShipmentQuery.data?.lastScanType ?? "-"}
+                <Typography fontWeight={700} variant="body1">
+                  {workflowQuery.data?.payment?.status ?? "-"}
                 </Typography>
-                <Stack spacing={1} sx={{ mt: 1 }}>
-                  {(notificationsQuery.data ?? []).slice(0, 4).map((notification) => (
-                    <Alert key={notification.notificationId} severity="info">
-                      {notification.title}: {notification.message}
-                    </Alert>
-                  ))}
-                  {!notificationsQuery.data?.length ? (
-                    <Alert severity="warning">Notifications appear only after downstream scan milestones are ingested.</Alert>
-                  ) : null}
-                </Stack>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Typography color="text.secondary" variant="caption">
+                  Reservation count
+                </Typography>
+                <Typography variant="body1">{workflowQuery.data?.reservations?.length ?? 0}</Typography>
               </Grid>
             </Grid>
+          </SectionCard>
+        </Grid>
+
+        <Grid size={{ xs: 12, xl: 6 }} sx={{ animation: "fadeUp 840ms ease both" }}>
+          <SectionCard subtitle="Customer-facing updates created after downstream scan milestones." title="Notification Feed">
+            <Stack spacing={1}>
+              {(notificationsQuery.data ?? []).slice(0, 4).map((notification) => (
+                <Alert key={notification.notificationId} severity="info">
+                  {notification.title}: {notification.message}
+                </Alert>
+              ))}
+              {!notificationsQuery.data?.length ? (
+                <Alert severity="warning">No customer notifications yet. They appear after shipment scan milestones are ingested.</Alert>
+              ) : null}
+            </Stack>
           </SectionCard>
         </Grid>
       </Grid>

@@ -1,6 +1,7 @@
-import HubRounded from "@mui/icons-material/HubRounded";
-import SecurityRounded from "@mui/icons-material/SecurityRounded";
-import TimelineRounded from "@mui/icons-material/TimelineRounded";
+import LockOpenRounded from "@mui/icons-material/LockOpenRounded";
+import PrecisionManufacturingRounded from "@mui/icons-material/PrecisionManufacturingRounded";
+import RouteRounded from "@mui/icons-material/RouteRounded";
+import TrendingUpRounded from "@mui/icons-material/TrendingUpRounded";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -26,6 +27,29 @@ const principals = [
   { username: "fc.operator.blr", password: "demo-pass", requestedNodeId: "NODE-BLR-FC-01", label: "FC Operator BLR FC 01" },
 ];
 
+const systemHighlights = [
+  {
+    icon: <TrendingUpRounded />,
+    title: "Planning loop",
+    description: "Forecast runs, replenishment quantities, and model metrics refresh on a 15-minute cadence.",
+  },
+  {
+    icon: <PrecisionManufacturingRounded />,
+    title: "Execution stack",
+    description: "Order, warehouse, shipment, scan, notification, returns, and node-registry services are surfaced in one console.",
+  },
+  {
+    icon: <RouteRounded />,
+    title: "Demo scope",
+    description: "Submit an order, advance fulfillment, inspect shipment state, review notifications, and watch planning outputs.",
+  },
+  {
+    icon: <LockOpenRounded />,
+    title: "Access model",
+    description: "JWT principals are role and node scoped. Use Ops Admin for the full surface or Planner Analyst for planning review.",
+  },
+];
+
 export function LoginPage({ onSuccess }: { onSuccess: (token: TokenResponse) => void }) {
   const [selected, setSelected] = useState(principals[0].label);
   const current = principals.find((principal) => principal.label === selected) ?? principals[0];
@@ -44,9 +68,10 @@ export function LoginPage({ onSuccess }: { onSuccess: (token: TokenResponse) => 
     <Box
       sx={{
         minHeight: "100vh",
-        p: { xs: 2, md: 4 },
+        px: { xs: 2, md: 4 },
+        py: { xs: 2.5, md: 4 },
         background:
-          "radial-gradient(circle at top left, rgba(20,75,125,0.22), transparent 22%), radial-gradient(circle at bottom right, rgba(183,103,18,0.18), transparent 24%), linear-gradient(140deg, #071320 0%, #0f2740 58%, #143c60 100%)",
+          "radial-gradient(circle at top left, rgba(22,102,179,0.2), transparent 24%), radial-gradient(circle at bottom right, rgba(255,138,61,0.16), transparent 24%), linear-gradient(145deg, #07131f 0%, #0c2135 48%, #102f4d 100%)",
       }}
     >
       <Grid alignItems="stretch" container spacing={3} sx={{ minHeight: "100%" }}>
@@ -58,86 +83,57 @@ export function LoginPage({ onSuccess }: { onSuccess: (token: TokenResponse) => 
               flexDirection: "column",
               justifyContent: "space-between",
               borderRadius: 6,
-              p: { xs: 3, md: 5 },
+              p: { xs: 3, md: 4.5 },
               color: "#fff",
             }}
           >
-            <Stack spacing={2.5}>
-              <Typography sx={{ letterSpacing: 1.6, textTransform: "uppercase", opacity: 0.78 }} variant="caption">
-                Intelligent Warehouse Orchestration System
+            <Stack spacing={2.75}>
+              <Typography sx={{ letterSpacing: 1.8, textTransform: "uppercase", opacity: 0.78, fontWeight: 800 }} variant="caption">
+                IWOS Demo Cell
               </Typography>
-              <Typography sx={{ maxWidth: 760 }} variant="h3">
-                Professional operations console for order intake, warehouse orchestration, parcel movement, and AI planning.
+              <Typography sx={{ maxWidth: 760, lineHeight: 1.05 }} variant="h3">
+                Unified control surface for orders, warehouse execution, parcel state, and planning signals.
               </Typography>
-              <Typography sx={{ color: "rgba(255,255,255,0.78)", maxWidth: 760 }} variant="body1">
-                This console is backed by Kong, JWT/RSA auth, event-driven Spring services, control-tower snapshots, and a 15-minute forecasting pipeline.
+              <Typography sx={{ color: "rgba(255,255,255,0.74)", maxWidth: 720 }} variant="body1">
+                Enter with a scoped principal. The console is backed by Kong, JWT/RSA auth, warehouse and network services, control-tower reads, and a 15-minute planning loop.
               </Typography>
             </Stack>
 
-            <Grid container spacing={2.5} sx={{ mt: 2 }}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <StatCard helper="Order intake to shipment milestones" label="Flow Coverage" value="E2E" />
+            <Grid container spacing={2} sx={{ mt: 1.5 }}>
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <StatCard helper="Order intake to parcel state" label="Flow" value="E2E" />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <StatCard helper="JWT + RS256 through gateway" label="Security Mode" value="Protected" />
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <StatCard helper="Kong + RS256 JWT" label="Security" value="Protected" />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <StatCard helper="Model + forecast refresh cadence" label="Planning Cadence" value="15 min" />
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <StatCard helper="Retrain and publish cadence" label="Planning" value="15 min" />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, xl: 3 }}>
+                <StatCard helper="Ops + planning + reverse flow" label="Coverage" value="Live" />
               </Grid>
             </Grid>
 
-            <Grid container spacing={2.5} sx={{ mt: 2 }}>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Card sx={{ bgcolor: "rgba(255,255,255,0.08)", color: "#fff", boxShadow: "none" }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1.5}>
-                      <TimelineRounded />
-                      <Stack spacing={0.75}>
-                        <Typography fontWeight={700} variant="body1">
-                          Forecasting
-                        </Typography>
-                        <Typography sx={{ color: "rgba(255,255,255,0.72)" }} variant="body2">
-                          Demand, replenishment, and stockout-risk outputs from the planning service.
-                        </Typography>
+            <Grid container spacing={2} sx={{ mt: 1.5 }}>
+              {systemHighlights.map((highlight) => (
+                <Grid key={highlight.title} size={{ xs: 12, md: 6 }}>
+                  <Card sx={{ bgcolor: "rgba(255,255,255,0.05)", color: "#fff", boxShadow: "none", borderRadius: 4 }}>
+                    <CardContent>
+                      <Stack direction="row" spacing={1.5}>
+                        {highlight.icon}
+                        <Stack spacing={0.6}>
+                          <Typography fontWeight={700} variant="body1">
+                            {highlight.title}
+                          </Typography>
+                          <Typography sx={{ color: "rgba(255,255,255,0.7)" }} variant="body2">
+                            {highlight.description}
+                          </Typography>
+                        </Stack>
                       </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Card sx={{ bgcolor: "rgba(255,255,255,0.08)", color: "#fff", boxShadow: "none" }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1.5}>
-                      <HubRounded />
-                      <Stack spacing={0.75}>
-                        <Typography fontWeight={700} variant="body1">
-                          Operations
-                        </Typography>
-                        <Typography sx={{ color: "rgba(255,255,255,0.72)" }} variant="body2">
-                          Control tower, node registry, shipment scans, and notifications in one surface.
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Card sx={{ bgcolor: "rgba(255,255,255,0.08)", color: "#fff", boxShadow: "none" }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1.5}>
-                      <SecurityRounded />
-                      <Stack spacing={0.75}>
-                        <Typography fontWeight={700} variant="body1">
-                          Security
-                        </Typography>
-                        <Typography sx={{ color: "rgba(255,255,255,0.72)" }} variant="body2">
-                          Role and node-scoped principals issue real access tokens through identity-service.
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
           </Box>
         </Grid>
@@ -147,9 +143,9 @@ export function LoginPage({ onSuccess }: { onSuccess: (token: TokenResponse) => 
             <CardContent sx={{ p: { xs: 3, md: 4 } }}>
               <Stack spacing={3}>
                 <Stack spacing={1}>
-                  <Typography variant="h4">Sign in to the demo console</Typography>
+                  <Typography variant="h4">Enter console</Typography>
                   <Typography color="text.secondary" variant="body2">
-                    Choose a pre-configured principal and authenticate through the gateway-backed identity flow.
+                    Choose a scoped principal and authenticate through the gateway-backed identity flow.
                   </Typography>
                 </Stack>
 

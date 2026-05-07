@@ -18,5 +18,5 @@ const colorByStatus = (value: string): "default" | "primary" | "secondary" | "su
 };
 
 export function StatusChip({ value }: { value: string }) {
-  return <Chip color={colorByStatus(value)} label={value} size="small" variant="filled" />;
+  return <Chip color={colorByStatus(value)} label={value.replaceAll("_", " ")} size="small" variant="filled" />;
 }
