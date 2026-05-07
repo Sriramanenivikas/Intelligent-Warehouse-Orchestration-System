@@ -43,6 +43,11 @@ public class ForecastController {
         return queryService.getLatestRun();
     }
 
+    @GetMapping("/model-runs/latest")
+    public ForecastModelRunResponse latestModelRun() {
+        return queryService.getLatestModelRun();
+    }
+
     @PostMapping("/forecast-runs/refresh")
     public ForecastRunResponse refreshNow() {
         return refreshService.refreshNow("MANUAL");

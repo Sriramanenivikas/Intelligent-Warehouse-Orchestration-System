@@ -1,6 +1,7 @@
 package com.iwos.forecasting.api.http;
 
 import com.iwos.forecasting.domain.ForecastNotFoundException;
+import com.iwos.forecasting.domain.ForecastModelRunNotFoundException;
 import com.iwos.forecasting.domain.ForecastRunNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
@@ -16,10 +17,16 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({ForecastNotFoundException.class, ForecastRunNotFoundException.class})
+    @ExceptionHandler({ForecastNotFoundException.class, ForecastRunNotFoundException.class, ForecastModelRunNotFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiErrorResponse handleNotFound(RuntimeException exception, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", exception.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleConflict(IllegalStateException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "INVALID_PIPELINE_STATE", exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler({

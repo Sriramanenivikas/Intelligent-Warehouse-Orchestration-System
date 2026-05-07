@@ -1,0 +1,6 @@
+mlflow==3.5.1
+numpy==2.3.3
+pandas==2.3.3
+psycopg2-binary==2.9.10
+scikit-learn==1.7.2
+SQLAlchemy==2.0.43

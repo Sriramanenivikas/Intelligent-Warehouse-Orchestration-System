@@ -6,11 +6,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ForecastingPlanningServiceProperties(
         String serviceName,
         SchedulerProperties scheduler,
+        PipelineProperties pipeline,
         ModelProperties model
 ) {
 
     public record SchedulerProperties(
             String refreshCron
+    ) {
+    }
+
+    public record PipelineProperties(
+            String mode
     ) {
     }
 

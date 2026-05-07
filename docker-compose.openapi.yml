@@ -1,0 +1,13 @@
+services:
+  openapi-portal:
+    image: swaggerapi/swagger-ui:v5.28.1
+    container_name: iwos-openapi-portal
+    restart: unless-stopped
+    ports:
+      - "8099:8080"
+    environment:
+      SWAGGER_JSON_URL: ""
+      URLS_PRIMARY_NAME: IWOS Forecasting Planning Service
+      CONFIG_URL: /openapi/swagger-config.json
+    volumes:
+      - ./infra/openapi/swagger-config.json:/usr/share/nginx/html/openapi/swagger-config.json:ro
