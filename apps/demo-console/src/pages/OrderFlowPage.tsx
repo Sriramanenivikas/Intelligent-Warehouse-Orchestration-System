@@ -108,6 +108,22 @@ export function OrderFlowPage({ token }: { token: string }) {
     },
   });
 
+  const manifestShipment = useMutation({
+    mutationFn: async () => {
+      if (!shipmentQuery.data) {
+        throw new Error("Shipment not ready");
+      }
+      return api.manifestShipment(shipmentQuery.data.shipmentId, token);
+    },
+    onSuccess: (response) => {
+      setMessage(`Manifested shipment ${response.awbNumber}`);
+      shipmentQuery.refetch();
+      networkShipmentQuery.refetch();
+      timelineQuery.refetch();
+      notificationsQuery.refetch();
+    },
+  });
+
   const recordScan = useMutation({
     mutationFn: async (scanType: string) => {
       if (!shipmentQuery.data) {
@@ -157,15 +173,17 @@ export function OrderFlowPage({ token }: { token: string }) {
     refetchInterval: 5000,
   });
 
+  const canQueryNetwork = shipmentQuery.data?.status != null && shipmentQuery.data.status !== "CREATED";
+
   const networkShipmentQuery = useQuery({
-    enabled: Boolean(orderIntentId),
+    enabled: canQueryNetwork,
     queryKey: ["network-shipment", orderIntentId],
     queryFn: () => api.getNetworkShipmentByOrderIntent(orderIntentId!, token),
     refetchInterval: 5000,
   });
 
   const timelineQuery = useQuery({
-    enabled: Boolean(orderIntentId),
+    enabled: canQueryNetwork,
     queryKey: ["timeline", orderIntentId],
     queryFn: () => api.getScanTimelineByOrderIntent(orderIntentId!, token),
     refetchInterval: 5000,
@@ -183,6 +201,7 @@ export function OrderFlowPage({ token }: { token: string }) {
     processWorkflow.isError ||
     processFulfillment.isError ||
     createShipment.isError ||
+    manifestShipment.isError ||
     recordScan.isError;
 
   return (
@@ -200,7 +219,7 @@ export function OrderFlowPage({ token }: { token: string }) {
 
       {anyError ? <Alert severity="error">One of the flow actions failed. Check the latest stage and retry from the next valid action.</Alert> : null}
       {message ? <Alert severity="success">{message}</Alert> : null}
-      {createOrder.isPending || processWorkflow.isPending || processFulfillment.isPending || createShipment.isPending || recordScan.isPending ? (
+      {createOrder.isPending || processWorkflow.isPending || processFulfillment.isPending || createShipment.isPending || manifestShipment.isPending || recordScan.isPending ? (
         <LinearProgress />
       ) : null}
 
@@ -284,9 +303,16 @@ export function OrderFlowPage({ token }: { token: string }) {
             </Stack>
 
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-              {["MANIFESTED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
+              <Button
+                disabled={!shipmentQuery.data}
+                onClick={() => manifestShipment.mutate()}
+                variant="contained"
+              >
+                {manifestShipment.isPending ? "Manifesting..." : "Manifest Shipment"}
+              </Button>
+              {["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
                 <Button
-                  disabled={!shipmentQuery.data}
+                  disabled={!networkShipmentQuery.data}
                   key={scanType}
                   onClick={() => recordScan.mutate(scanType)}
                   variant="text"
@@ -357,7 +383,10 @@ export function OrderFlowPage({ token }: { token: string }) {
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography fontWeight={600} variant="subtitle2">
-                  Notification feed
+                  Network and notification feed
+                </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  Network status {networkShipmentQuery.data?.status ?? "Pending"} · Last scan {networkShipmentQuery.data?.lastScanType ?? "-"}
                 </Typography>
                 <Stack spacing={1} sx={{ mt: 1 }}>
                   {(notificationsQuery.data ?? []).slice(0, 4).map((notification) => (
@@ -365,6 +394,9 @@ export function OrderFlowPage({ token }: { token: string }) {
                       {notification.title}: {notification.message}
                     </Alert>
                   ))}
+                  {!notificationsQuery.data?.length ? (
+                    <Alert severity="warning">Notifications appear only after downstream scan milestones are ingested.</Alert>
+                  ) : null}
                 </Stack>
               </Grid>
             </Grid>

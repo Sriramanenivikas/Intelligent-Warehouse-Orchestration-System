@@ -67,22 +67,22 @@ export type OrderWorkflowResponse = {
   createdAt: string;
   updatedAt: string;
   payment?: {
-    paymentId: string;
+    paymentIntentId: string;
     providerReference?: string | null;
     status: string;
-    amountAuthorized?: number | null;
-    currency?: string | null;
-    authorizedAt?: string | null;
-    failedAt?: string | null;
+    failureReason?: string | null;
+    processedAt?: string | null;
   } | null;
   reservations?: Array<{
-    reservationId: string;
+    workflowReservationId: string;
+    orderIntentItemId: string;
+    inventoryReservationId: string;
     sku: string;
     nodeId: string;
-    quantityReserved: number;
+    quantity: number;
     status: string;
-    reservedAt?: string | null;
-    releasedAt?: string | null;
+    createdAt: string;
+    updatedAt: string;
   }> | null;
 };
 
@@ -290,29 +290,36 @@ export type ControlTowerSnapshotResponse = {
 export type NodeResponse = {
   nodeId: string;
   nodeCode: string;
-  nodeName: string;
+  displayName: string;
   nodeType: string;
   city: string;
   state: string;
   country: string;
+  postalCode: string;
   timezone: string;
+  priority: number;
+  supportsExpress: boolean;
+  supportsParcel: boolean;
   active: boolean;
-  capacityUnitsPerHour?: number;
-  contactName?: string;
-  contactPhone?: string;
+  externalReferenceId?: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ReturnResponse = {
   returnRequestId: string;
   orderIntentId: string;
+  fulfillmentOrderId?: string | null;
   shipmentId?: string;
   customerId: string;
+  nodeId: string;
   status: string;
   reasonCode: string;
-  channel: string;
-  notes?: string;
+  reasonDetail?: string | null;
+  itemCount: number;
   createdAt: string;
   updatedAt: string;
+  requestedAt: string;
   approvedAt?: string;
   receivedAt?: string;
   items: Array<{

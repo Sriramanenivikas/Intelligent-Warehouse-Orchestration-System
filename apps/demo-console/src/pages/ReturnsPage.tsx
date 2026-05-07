@@ -43,9 +43,9 @@ export function ReturnsPage({ token }: { token: string }) {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatCard
-            helper={returns[0] ? formatDateTime(returns[0].updatedAt) : "N/A"}
-            label="Latest Activity"
-            value={returns[0]?.status ?? "-"}
+            helper={returns[0] ? formatDateTime(returns[0].requestedAt) : "N/A"}
+            label="Latest Request"
+            value={returns[0]?.reasonCode ?? "-"}
           />
         </Grid>
       </Grid>
@@ -60,7 +60,7 @@ export function ReturnsPage({ token }: { token: string }) {
                   <TableCell>Order Intent</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Reason</TableCell>
-                  <TableCell>Channel</TableCell>
+                  <TableCell>Node</TableCell>
                   <TableCell>Updated</TableCell>
                 </TableRow>
               </TableHead>
@@ -77,10 +77,10 @@ export function ReturnsPage({ token }: { token: string }) {
                         {entry.reasonCode}
                       </Typography>
                       <Typography color="text.secondary" variant="caption">
-                        {entry.notes ?? "No extra notes"}
+                        {entry.reasonDetail ?? "No extra detail"}
                       </Typography>
                     </TableCell>
-                    <TableCell>{entry.channel}</TableCell>
+                    <TableCell>{entry.nodeId}</TableCell>
                     <TableCell>{formatDateTime(entry.updatedAt)}</TableCell>
                   </TableRow>
                 ))}

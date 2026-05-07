@@ -57,8 +57,8 @@ export function NodesPage({ token }: { token: string }) {
                   <TableCell>Name</TableCell>
                   <TableCell>Type</TableCell>
                   <TableCell>City</TableCell>
-                  <TableCell>Timezone</TableCell>
-                  <TableCell>Capacity / hr</TableCell>
+                  <TableCell>Priority</TableCell>
+                  <TableCell>Capabilities</TableCell>
                   <TableCell>Status</TableCell>
                 </TableRow>
               </TableHead>
@@ -68,7 +68,7 @@ export function NodesPage({ token }: { token: string }) {
                     <TableCell>{node.nodeId}</TableCell>
                     <TableCell>
                       <Typography fontWeight={600} variant="body2">
-                        {node.nodeName}
+                        {node.displayName}
                       </Typography>
                       <Typography color="text.secondary" variant="caption">
                         {node.nodeCode}
@@ -78,8 +78,15 @@ export function NodesPage({ token }: { token: string }) {
                     <TableCell>
                       {node.city}, {node.state}
                     </TableCell>
-                    <TableCell>{node.timezone}</TableCell>
-                    <TableCell>{node.capacityUnitsPerHour ?? "-"}</TableCell>
+                    <TableCell>{node.priority}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {node.supportsExpress ? "Express" : "Standard"} · {node.supportsParcel ? "Parcel" : "No parcel"}
+                      </Typography>
+                      <Typography color="text.secondary" variant="caption">
+                        {node.timezone}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <StatusChip value={node.active ? "ACTIVE" : "INACTIVE"} />
                     </TableCell>
