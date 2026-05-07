@@ -48,6 +48,11 @@ public class ForecastController {
         return queryService.getLatestModelRun();
     }
 
+    @GetMapping("/forecast-runs/latest/summary")
+    public ForecastSummaryResponse latestSummary() {
+        return queryService.getLatestSummary();
+    }
+
     @PostMapping("/forecast-runs/refresh")
     public ForecastRunResponse refreshNow() {
         return refreshService.refreshNow("MANUAL");
