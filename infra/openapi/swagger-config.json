@@ -51,6 +51,18 @@
     {
       "name": "IWOS Forecasting Planning Service",
       "url": "http://localhost:8093/v3/api-docs"
+    },
+    {
+      "name": "IWOS Control Tower Service",
+      "url": "http://localhost:8094/v3/api-docs"
+    },
+    {
+      "name": "IWOS Node Registry Service",
+      "url": "http://localhost:8095/v3/api-docs"
+    },
+    {
+      "name": "IWOS Returns Service",
+      "url": "http://localhost:8096/v3/api-docs"
     }
   ],
   "urls.primaryName": "IWOS Forecasting Planning Service",
