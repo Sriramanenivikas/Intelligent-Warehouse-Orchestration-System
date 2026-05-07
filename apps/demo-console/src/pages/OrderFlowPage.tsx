@@ -75,6 +75,7 @@ export function OrderFlowPage({ token }: { token: string }) {
       if (!orderIntentId) {
         throw new Error("Create an order first");
       }
+      await api.processOrderWorkflow(orderIntentId, token);
       return api.processFulfillment(orderIntentId, token);
     },
     onSuccess: (response) => {
@@ -309,4 +310,3 @@ export function OrderFlowPage({ token }: { token: string }) {
     </Stack>
   );
 }
-
