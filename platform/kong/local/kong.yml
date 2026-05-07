@@ -23,6 +23,14 @@ consumers:
           -----END PUBLIC KEY-----
 
 services:
+  - name: identity-service
+    url: http://host.docker.internal:8092
+    routes:
+      - name: identity-auth-route
+        paths:
+          - /api/v1/auth/token
+        strip_path: false
+
   - name: order-intake-service
     url: http://host.docker.internal:8081
     routes:
@@ -114,6 +122,80 @@ services:
       - name: notification-route
         paths:
           - /api/v1/notifications
+        strip_path: false
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: forecasting-planning-service
+    url: http://host.docker.internal:8093
+    routes:
+      - name: forecasting-planning-route
+        paths:
+          - /api/v1/forecasts
+          - /api/v1/forecast-runs
+          - /api/v1/model-runs
+        strip_path: false
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: control-tower-service
+    url: http://host.docker.internal:8094
+    routes:
+      - name: control-tower-route
+        paths:
+          - /api/v1/control-tower
+        strip_path: false
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: node-registry-service
+    url: http://host.docker.internal:8095
+    routes:
+      - name: node-registry-route
+        paths:
+          - /api/v1/nodes
+        strip_path: false
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
+
+  - name: returns-service
+    url: http://host.docker.internal:8096
+    routes:
+      - name: returns-route
+        paths:
+          - /api/v1/returns
         strip_path: false
     plugins:
       - name: jwt

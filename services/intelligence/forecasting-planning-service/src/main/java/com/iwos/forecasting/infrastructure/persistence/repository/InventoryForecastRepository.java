@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface InventoryForecastRepository extends JpaRepository<InventoryForecastEntity, UUID> {
 
+    List<InventoryForecastEntity> findByForecastRunId(UUID forecastRunId);
+
     @Query(value = """
             SELECT forecast.*
             FROM forecasting_planning.inventory_forecasts forecast

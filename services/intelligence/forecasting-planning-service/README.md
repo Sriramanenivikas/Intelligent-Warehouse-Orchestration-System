@@ -1,9 +1,16 @@
 # forecasting-planning-service
 
-Demand forecasting and replenishment planning service skeleton
+Demand forecasting and replenishment planning service
 
-Status:
+Implemented APIs:
 
-- planning skeleton only
-- no implementation code yet
-- package structure reserved for future development
+- `GET /api/v1/forecasts`
+- `GET /api/v1/forecasts/{forecastId}`
+- `GET /api/v1/forecast-runs/latest`
+- `GET /api/v1/model-runs/latest`
+- `POST /api/v1/forecast-runs/refresh`
+
+Modes:
+
+- `HEURISTIC`
+- `EXTERNAL_ML`

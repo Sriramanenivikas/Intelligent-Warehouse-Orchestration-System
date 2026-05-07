@@ -45,11 +45,17 @@ public class ForecastRefreshService {
 
     @Scheduled(cron = "${forecasting-planning-service.scheduler.refresh-cron}")
     public void scheduledRefresh() {
+        if (!heuristicModeEnabled()) {
+            return;
+        }
         refreshNow("SCHEDULED");
     }
 
     @Transactional
     public ForecastRunResponse refreshNow(String triggeredBy) {
+        if (!heuristicModeEnabled()) {
+            throw new IllegalStateException("Manual heuristic refresh is disabled when external ML pipeline mode is active");
+        }
         Instant now = Instant.now();
         ForecastRunEntity run = new ForecastRunEntity();
         run.setForecastRunId(UUID.randomUUID());
@@ -71,5 +77,11 @@ public class ForecastRefreshService {
         run.setCompletedAt(Instant.now());
         runRepository.save(run);
         return mapper.toRunResponse(run);
+    }
+
+    private boolean heuristicModeEnabled() {
+        return properties.pipeline() == null
+                || properties.pipeline().mode() == null
+                || "HEURISTIC".equalsIgnoreCase(properties.pipeline().mode());
     }
 }

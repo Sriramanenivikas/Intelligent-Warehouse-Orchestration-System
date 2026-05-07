@@ -1,0 +1,72 @@
+{
+  "urls": [
+    {
+      "name": "IWOS Order Intake Service",
+      "url": "http://localhost:8081/v3/api-docs"
+    },
+    {
+      "name": "IWOS Inventory Ledger Service",
+      "url": "http://localhost:8082/v3/api-docs"
+    },
+    {
+      "name": "IWOS Order Orchestrator Service",
+      "url": "http://localhost:8083/v3/api-docs"
+    },
+    {
+      "name": "IWOS Promise Allocation Service",
+      "url": "http://localhost:8084/v3/api-docs"
+    },
+    {
+      "name": "IWOS Payment Service",
+      "url": "http://localhost:8085/v3/api-docs"
+    },
+    {
+      "name": "IWOS Warehouse Orchestrator Service",
+      "url": "http://localhost:8086/v3/api-docs"
+    },
+    {
+      "name": "IWOS Task Execution Service",
+      "url": "http://localhost:8087/v3/api-docs"
+    },
+    {
+      "name": "IWOS Shipment Handoff Service",
+      "url": "http://localhost:8088/v3/api-docs"
+    },
+    {
+      "name": "IWOS Shipment Network Service",
+      "url": "http://localhost:8089/v3/api-docs"
+    },
+    {
+      "name": "IWOS Scan Event Service",
+      "url": "http://localhost:8090/v3/api-docs"
+    },
+    {
+      "name": "IWOS Notification Service",
+      "url": "http://localhost:8091/v3/api-docs"
+    },
+    {
+      "name": "IWOS Identity Service",
+      "url": "http://localhost:8092/v3/api-docs"
+    },
+    {
+      "name": "IWOS Forecasting Planning Service",
+      "url": "http://localhost:8093/v3/api-docs"
+    },
+    {
+      "name": "IWOS Control Tower Service",
+      "url": "http://localhost:8094/v3/api-docs"
+    },
+    {
+      "name": "IWOS Node Registry Service",
+      "url": "http://localhost:8095/v3/api-docs"
+    },
+    {
+      "name": "IWOS Returns Service",
+      "url": "http://localhost:8096/v3/api-docs"
+    }
+  ],
+  "urls.primaryName": "IWOS Forecasting Planning Service",
+  "docExpansion": "list",
+  "displayRequestDuration": true,
+  "filter": true
+}

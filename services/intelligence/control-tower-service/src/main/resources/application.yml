@@ -1,12 +1,47 @@
 spring:
   application:
     name: control-tower-service
+  datasource:
+    url: ${CONTROL_TOWER_DB_URL:jdbc:postgresql://localhost:55432/iwos}
+    username: ${CONTROL_TOWER_DB_USERNAME:iwos}
+    password: ${CONTROL_TOWER_DB_PASSWORD:iwos_secret}
+  flyway:
+    enabled: true
+    schemas: control_tower
+    default-schema: control_tower
+    table: control_tower_flyway_schema_history
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
 
 server:
-  port: 0
+  port: 8094
+  shutdown: graceful
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      service: control-tower-service
+      env: ${APP_ENV:local}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+control-tower-service:
+  service-name: control-tower-service
+  scheduler:
+    refresh-cron: ${CONTROL_TOWER_REFRESH_CRON:0 */15 * * * *}
+  snapshot:
+    top-limit: ${CONTROL_TOWER_TOP_LIMIT:5}
