@@ -8,6 +8,7 @@ import type {
   NetworkShipmentResponse,
   NodeResponse,
   NotificationResponse,
+  OrderWorkflowResponse,
   OrderIntentResponse,
   ReturnResponse,
   ScanTimelineResponse,
@@ -87,11 +88,11 @@ export const api = {
   getOrderIntent(orderIntentId: string, token?: string | null) {
     return request<OrderIntentResponse>(`/api/v1/order-intents/${orderIntentId}`, { token });
   },
+  getOrderWorkflow(orderIntentId: string, token: string) {
+    return request<OrderWorkflowResponse>(`/api/v1/order-workflows/${orderIntentId}`, { token });
+  },
   processOrderWorkflow(orderIntentId: string, token: string) {
-    return request<{ workflowId: string; orderIntentId: string; status: string }>(
-      `/api/v1/order-workflows/${orderIntentId}/process`,
-      { method: "POST", token },
-    );
+    return request<OrderWorkflowResponse>(`/api/v1/order-workflows/${orderIntentId}/process`, { method: "POST", token });
   },
   processFulfillment(orderIntentId: string, token: string) {
     return request<{ fulfillmentOrderId: string; orderIntentId: string; status: string }>(

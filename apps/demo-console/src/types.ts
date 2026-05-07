@@ -54,6 +54,38 @@ export type FulfillmentOrderResponse = {
   }>;
 };
 
+export type OrderWorkflowResponse = {
+  workflowId: string;
+  orderIntentId: string;
+  sourceOutboxEventId: string;
+  customerId: string;
+  fulfillmentNodeId: string;
+  status: string;
+  failureReason?: string | null;
+  acceptedAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  payment?: {
+    paymentId: string;
+    providerReference?: string | null;
+    status: string;
+    amountAuthorized?: number | null;
+    currency?: string | null;
+    authorizedAt?: string | null;
+    failedAt?: string | null;
+  } | null;
+  reservations?: Array<{
+    reservationId: string;
+    sku: string;
+    nodeId: string;
+    quantityReserved: number;
+    status: string;
+    reservedAt?: string | null;
+    releasedAt?: string | null;
+  }> | null;
+};
+
 export type ShipmentResponse = {
   shipmentId: string;
   fulfillmentOrderId: string;
@@ -288,4 +320,3 @@ export type ReturnResponse = {
     quantity: number;
   }>;
 };
-

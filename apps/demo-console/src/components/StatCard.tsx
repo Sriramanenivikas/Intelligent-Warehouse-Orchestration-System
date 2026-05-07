@@ -8,13 +8,15 @@ type Props = {
 
 export function StatCard({ label, value, helper }: Props) {
   return (
-    <Card>
+    <Card sx={{ minHeight: 148 }}>
       <CardContent>
-        <Stack spacing={1}>
-          <Typography color="text.secondary" variant="body2">
+        <Stack spacing={1.5}>
+          <Typography color="text.secondary" sx={{ letterSpacing: 0.5, textTransform: "uppercase" }} variant="caption">
             {label}
           </Typography>
-          <Typography variant="h5">{value}</Typography>
+          <Typography sx={{ color: "primary.dark" }} variant="h4">
+            {value}
+          </Typography>
           {helper ? (
             <Typography color="text.secondary" variant="caption">
               {helper}
@@ -25,4 +27,3 @@ export function StatCard({ label, value, helper }: Props) {
     </Card>
   );
 }
-

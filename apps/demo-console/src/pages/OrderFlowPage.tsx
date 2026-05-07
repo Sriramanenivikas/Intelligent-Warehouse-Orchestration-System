@@ -2,13 +2,9 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert,
-  Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   Grid,
-  MenuItem,
+  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -19,6 +15,9 @@ import {
   Typography,
 } from "@mui/material";
 import { api, formatDateTime } from "../api";
+import { PageHeader } from "../components/PageHeader";
+import { SectionCard } from "../components/SectionCard";
+import { StatusChip } from "../components/StatusChip";
 
 const defaultOrder = {
   customerId: "customer-001",
@@ -70,16 +69,29 @@ export function OrderFlowPage({ token }: { token: string }) {
     },
   });
 
+  const processWorkflow = useMutation({
+    mutationFn: async () => {
+      if (!orderIntentId) {
+        throw new Error("Create an order first");
+      }
+      return api.processOrderWorkflow(orderIntentId, token);
+    },
+    onSuccess: (response) => {
+      setMessage(`Workflow ${response.workflowId} moved to ${response.status}`);
+      workflowQuery.refetch();
+    },
+  });
+
   const processFulfillment = useMutation({
     mutationFn: async () => {
       if (!orderIntentId) {
         throw new Error("Create an order first");
       }
-      await api.processOrderWorkflow(orderIntentId, token);
       return api.processFulfillment(orderIntentId, token);
     },
     onSuccess: (response) => {
-      setMessage(`Created fulfillment workflow ${response.fulfillmentOrderId}`);
+      setMessage(`Created fulfillment order ${response.fulfillmentOrderId}`);
+      fulfillmentQuery.refetch();
     },
   });
 
@@ -92,6 +104,7 @@ export function OrderFlowPage({ token }: { token: string }) {
     },
     onSuccess: (response) => {
       setMessage(`Created shipment ${response.shipmentId}`);
+      shipmentQuery.refetch();
     },
   });
 
@@ -110,201 +123,252 @@ export function OrderFlowPage({ token }: { token: string }) {
     },
     onSuccess: (_, scanType) => {
       setMessage(`Recorded ${scanType} scan`);
+      networkShipmentQuery.refetch();
+      timelineQuery.refetch();
+      notificationsQuery.refetch();
     },
   });
 
   const orderQuery = useQuery({
+    enabled: Boolean(orderIntentId),
     queryKey: ["order-intent", orderIntentId],
     queryFn: () => api.getOrderIntent(orderIntentId!, token),
-    enabled: Boolean(orderIntentId),
     refetchInterval: 5000,
   });
+
+  const workflowQuery = useQuery({
+    enabled: Boolean(orderIntentId),
+    queryKey: ["order-workflow", orderIntentId],
+    queryFn: () => api.getOrderWorkflow(orderIntentId!, token),
+    refetchInterval: 5000,
+  });
+
   const fulfillmentQuery = useQuery({
-    queryKey: ["fulfillment-by-order", orderIntentId],
+    enabled: Boolean(orderIntentId),
+    queryKey: ["fulfillment", orderIntentId],
     queryFn: () => api.getFulfillmentByOrderIntent(orderIntentId!, token),
-    enabled: Boolean(orderIntentId),
     refetchInterval: 5000,
   });
+
   const shipmentQuery = useQuery({
-    queryKey: ["shipment-by-order", orderIntentId],
+    enabled: Boolean(orderIntentId),
+    queryKey: ["shipment", orderIntentId],
     queryFn: () => api.getShipmentByOrderIntent(orderIntentId!, token),
-    enabled: Boolean(orderIntentId),
     refetchInterval: 5000,
-    retry: false,
   });
+
+  const networkShipmentQuery = useQuery({
+    enabled: Boolean(orderIntentId),
+    queryKey: ["network-shipment", orderIntentId],
+    queryFn: () => api.getNetworkShipmentByOrderIntent(orderIntentId!, token),
+    refetchInterval: 5000,
+  });
+
   const timelineQuery = useQuery({
-    queryKey: ["timeline-by-order", orderIntentId],
+    enabled: Boolean(orderIntentId),
+    queryKey: ["timeline", orderIntentId],
     queryFn: () => api.getScanTimelineByOrderIntent(orderIntentId!, token),
-    enabled: Boolean(orderIntentId),
     refetchInterval: 5000,
-    retry: false,
   });
+
   const notificationsQuery = useQuery({
-    queryKey: ["notifications-by-order", orderIntentId],
-    queryFn: () => api.listNotificationsByOrderIntent(orderIntentId!, token),
     enabled: Boolean(orderIntentId),
+    queryKey: ["notifications", orderIntentId],
+    queryFn: () => api.listNotificationsByOrderIntent(orderIntentId!, token),
     refetchInterval: 5000,
-    retry: false,
   });
+
+  const anyError =
+    createOrder.isError ||
+    processWorkflow.isError ||
+    processFulfillment.isError ||
+    createShipment.isError ||
+    recordScan.isError;
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4">Order Flow</Typography>
-        <Typography color="text.secondary">
-          Submit an order, drive fulfillment and shipment actions, and watch the downstream state update.
-        </Typography>
-      </Stack>
-      {message ? <Alert severity="info">{message}</Alert> : null}
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">Create Demo Order</Typography>
+      <PageHeader
+        badges={[
+          { label: "Order Intake", color: "primary" },
+          { label: "Warehouse", color: "secondary" },
+          { label: "Shipment + Notifications", color: "success" },
+        ]}
+        description="Drive one realistic demo path: accept an order intent, process the order workflow, allocate fulfillment, create a shipment, and record network scans that feed timeline and notifications."
+        eyebrow="Operational Demo"
+        title="Order Flow Console"
+      />
+
+      {anyError ? <Alert severity="error">One of the flow actions failed. Check the latest stage and retry from the next valid action.</Alert> : null}
+      {message ? <Alert severity="success">{message}</Alert> : null}
+      {createOrder.isPending || processWorkflow.isPending || processFulfillment.isPending || createShipment.isPending || recordScan.isPending ? (
+        <LinearProgress />
+      ) : null}
+
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <SectionCard subtitle="Use one compact order form to seed the entire orchestration flow." title="Create Demo Order">
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
+                  fullWidth
                   label="Customer ID"
                   onChange={(event) => setForm((current) => ({ ...current, customerId: event.target.value }))}
                   value={form.customerId}
                 />
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Channel"
-                      onChange={(event) => setForm((current) => ({ ...current, channel: event.target.value }))}
-                      select
-                      value={form.channel}
-                    >
-                      <MenuItem value="APP">APP</MenuItem>
-                      <MenuItem value="WEB">WEB</MenuItem>
-                      <MenuItem value="PARTNER">PARTNER</MenuItem>
-                    </TextField>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Payment Mode"
-                      onChange={(event) => setForm((current) => ({ ...current, paymentMode: event.target.value }))}
-                      select
-                      value={form.paymentMode}
-                    >
-                      <MenuItem value="PREPAID">PREPAID</MenuItem>
-                      <MenuItem value="COD">COD</MenuItem>
-                    </TextField>
-                  </Grid>
-                </Grid>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="SKU"
-                      onChange={(event) => setForm((current) => ({ ...current, sku: event.target.value }))}
-                      value={form.sku}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      label="Qty"
-                      onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
-                      value={form.quantity}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 3 }}>
-                    <TextField
-                      fullWidth
-                      label="Amount"
-                      onChange={(event) => setForm((current) => ({ ...current, totalAmount: event.target.value }))}
-                      value={form.totalAmount}
-                    />
-                  </Grid>
-                </Grid>
-                <Button onClick={() => createOrder.mutate()} variant="contained">
-                  {createOrder.isPending ? "Submitting..." : "Submit Order Intent"}
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="SKU"
+                  onChange={(event) => setForm((current) => ({ ...current, sku: event.target.value }))}
+                  value={form.sku}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Quantity"
+                  onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))}
+                  value={form.quantity}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Total Amount"
+                  onChange={(event) => setForm((current) => ({ ...current, totalAmount: event.target.value }))}
+                  value={form.totalAmount}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
+                  value={form.city}
+                />
+              </Grid>
+            </Grid>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <Button fullWidth onClick={() => createOrder.mutate()} variant="contained">
+                {createOrder.isPending ? "Submitting..." : "Submit Order Intent"}
+              </Button>
+              <Button
+                disabled={!orderIntentId}
+                fullWidth
+                onClick={() => processWorkflow.mutate()}
+                variant="outlined"
+              >
+                {processWorkflow.isPending ? "Processing..." : "Process Workflow"}
+              </Button>
+            </Stack>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <Button
+                disabled={!orderIntentId}
+                fullWidth
+                onClick={() => processFulfillment.mutate()}
+                variant="contained"
+              >
+                {processFulfillment.isPending ? "Allocating..." : "Create Fulfillment"}
+              </Button>
+              <Button
+                disabled={!fulfillmentQuery.data}
+                fullWidth
+                onClick={() => createShipment.mutate()}
+                variant="outlined"
+              >
+                {createShipment.isPending ? "Creating..." : "Create Shipment"}
+              </Button>
+            </Stack>
+
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
+              {["MANIFESTED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
+                <Button
+                  disabled={!shipmentQuery.data}
+                  key={scanType}
+                  onClick={() => recordScan.mutate(scanType)}
+                  variant="text"
+                >
+                  {scanType}
                 </Button>
-                <Stack direction="row" spacing={1}>
-                  <Button disabled={!orderIntentId} onClick={() => processFulfillment.mutate()} variant="outlined">
-                    Process Fulfillment
-                  </Button>
-                  <Button disabled={!fulfillmentQuery.data} onClick={() => createShipment.mutate()} variant="outlined">
-                    Create Shipment
-                  </Button>
-                </Stack>
-                <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap>
-                  <Button disabled={!shipmentQuery.data} onClick={() => recordScan.mutate("MANIFESTED")} size="small" variant="text">
-                    Manifest Scan
-                  </Button>
-                  <Button disabled={!shipmentQuery.data} onClick={() => recordScan.mutate("HUB_RECEIVED")} size="small" variant="text">
-                    Hub Received
-                  </Button>
-                  <Button disabled={!shipmentQuery.data} onClick={() => recordScan.mutate("OUT_FOR_DELIVERY")} size="small" variant="text">
-                    Out For Delivery
-                  </Button>
-                  <Button disabled={!shipmentQuery.data} onClick={() => recordScan.mutate("DELIVERED")} size="small" variant="text">
-                    Delivered
-                  </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
+              ))}
+            </Stack>
+          </SectionCard>
         </Grid>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">Order Lifecycle</Typography>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Stage</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Reference</TableCell>
-                      <TableCell>Updated</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Order Intent</TableCell>
-                      <TableCell>{orderQuery.data ? <Chip label="ACCEPTED" size="small" /> : "Pending"}</TableCell>
-                      <TableCell>{orderQuery.data?.orderIntentId ?? "-"}</TableCell>
-                      <TableCell>{formatDateTime(orderQuery.data?.acceptedAt)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Fulfillment</TableCell>
-                      <TableCell>{fulfillmentQuery.data ? <Chip color="primary" label={fulfillmentQuery.data.status} size="small" /> : "Pending"}</TableCell>
-                      <TableCell>{fulfillmentQuery.data?.fulfillmentOrderId ?? "-"}</TableCell>
-                      <TableCell>{formatDateTime(fulfillmentQuery.data?.updatedAt)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Shipment</TableCell>
-                      <TableCell>{shipmentQuery.data ? <Chip color="secondary" label={shipmentQuery.data.status} size="small" /> : "Pending"}</TableCell>
-                      <TableCell>{shipmentQuery.data?.awbNumber ?? "-"}</TableCell>
-                      <TableCell>{formatDateTime(shipmentQuery.data?.updatedAt)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Timeline</TableCell>
-                      <TableCell>{timelineQuery.data ? <Chip label={timelineQuery.data.currentStatus} size="small" /> : "Pending"}</TableCell>
-                      <TableCell>{timelineQuery.data?.lastScanType ?? "-"}</TableCell>
-                      <TableCell>{formatDateTime(timelineQuery.data?.updatedAt)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-                <Box>
-                  <Typography gutterBottom variant="subtitle2">
-                    Notifications
-                  </Typography>
-                  <Stack spacing={1}>
-                    {(notificationsQuery.data ?? []).slice(0, 4).map((notification) => (
-                      <Alert key={notification.notificationId} severity="info">
-                        {notification.title}: {notification.message}
-                      </Alert>
-                    ))}
-                  </Stack>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
+
+        <Grid size={{ xs: 12, xl: 8 }}>
+          <SectionCard subtitle="Every stage shown here reflects real backend state from the running services." title="Lifecycle Timeline">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Stage</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Reference</TableCell>
+                  <TableCell>Updated</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Order Intent</TableCell>
+                  <TableCell>{orderQuery.data ? <StatusChip value="ACCEPTED" /> : "Pending"}</TableCell>
+                  <TableCell>{orderQuery.data?.orderIntentId ?? "-"}</TableCell>
+                  <TableCell>{formatDateTime(orderQuery.data?.acceptedAt)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Order Workflow</TableCell>
+                  <TableCell>{workflowQuery.data ? <StatusChip value={workflowQuery.data.status} /> : "Pending"}</TableCell>
+                  <TableCell>{workflowQuery.data?.workflowId ?? "-"}</TableCell>
+                  <TableCell>{formatDateTime(workflowQuery.data?.updatedAt)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Fulfillment</TableCell>
+                  <TableCell>{fulfillmentQuery.data ? <StatusChip value={fulfillmentQuery.data.status} /> : "Pending"}</TableCell>
+                  <TableCell>{fulfillmentQuery.data?.fulfillmentOrderId ?? "-"}</TableCell>
+                  <TableCell>{formatDateTime(fulfillmentQuery.data?.updatedAt)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Shipment</TableCell>
+                  <TableCell>{shipmentQuery.data ? <StatusChip value={shipmentQuery.data.status} /> : "Pending"}</TableCell>
+                  <TableCell>{shipmentQuery.data?.awbNumber ?? "-"}</TableCell>
+                  <TableCell>{formatDateTime(shipmentQuery.data?.updatedAt)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Network Timeline</TableCell>
+                  <TableCell>{timelineQuery.data ? <StatusChip value={timelineQuery.data.currentStatus} /> : "Pending"}</TableCell>
+                  <TableCell>{timelineQuery.data?.lastScanType ?? "-"}</TableCell>
+                  <TableCell>{formatDateTime(timelineQuery.data?.updatedAt)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography fontWeight={600} variant="subtitle2">
+                  Workflow details
+                </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  Node {workflowQuery.data?.fulfillmentNodeId ?? "-"} · Customer {workflowQuery.data?.customerId ?? "-"}
+                </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  Payment {workflowQuery.data?.payment?.status ?? "-"} · Reservations {workflowQuery.data?.reservations?.length ?? 0}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography fontWeight={600} variant="subtitle2">
+                  Notification feed
+                </Typography>
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {(notificationsQuery.data ?? []).slice(0, 4).map((notification) => (
+                    <Alert key={notification.notificationId} severity="info">
+                      {notification.title}: {notification.message}
+                    </Alert>
+                  ))}
+                </Stack>
+              </Grid>
+            </Grid>
+          </SectionCard>
         </Grid>
       </Grid>
     </Stack>

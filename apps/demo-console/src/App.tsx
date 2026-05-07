@@ -31,13 +31,18 @@ export default function App() {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(token));
   };
 
+  const handleLogout = () => {
+    setSession(null);
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  };
+
   if (!session) {
     return <LoginPage onSuccess={handleLogin} />;
   }
 
   return (
     <Routes>
-      <Route element={<AppShell session={session} />}>
+      <Route element={<AppShell onLogout={handleLogout} session={session} />}>
         <Route element={<OverviewPage token={session.accessToken} />} path="/" />
         <Route element={<OrderFlowPage token={session.accessToken} />} path="/order-flow" />
         <Route element={<ForecastingPage token={session.accessToken} />} path="/forecasting" />
