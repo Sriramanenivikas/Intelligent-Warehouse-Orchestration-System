@@ -53,10 +53,12 @@ const stageActions = [
 export function OrderFlowPage({ token }: { token: string }) {
   const [form, setForm] = useState(defaultOrder);
   const [orderIntentId, setOrderIntentId] = useState<string | null>(null);
+  const [fulfillmentOrderId, setFulfillmentOrderId] = useState<string | null>(null);
+  const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [flowWarning, setFlowWarning] = useState<string | null>(null);
 
-  const idempotencyKey = useMemo(() => `iwos-demo-${Date.now()}`, [orderIntentId]);
+  const idempotencyKey = useMemo(() => `iwos-demo-${crypto.randomUUID()}`, [orderIntentId]);
 
   const createOrder = useMutation({
     mutationFn: async () =>
@@ -84,6 +86,8 @@ export function OrderFlowPage({ token }: { token: string }) {
       }),
     onSuccess: (response) => {
       setOrderIntentId(response.orderIntentId);
+      setFulfillmentOrderId(null);
+      setShipmentId(null);
       setMessage(`Accepted order intent ${response.orderIntentId}`);
       setFlowWarning(null);
     },
@@ -116,6 +120,7 @@ export function OrderFlowPage({ token }: { token: string }) {
       return api.processFulfillment(orderIntentId, token);
     },
     onSuccess: (response) => {
+      setFulfillmentOrderId(response.fulfillmentOrderId);
       setMessage(`Created fulfillment order ${response.fulfillmentOrderId}`);
       fulfillmentQuery.refetch();
     },
@@ -129,6 +134,7 @@ export function OrderFlowPage({ token }: { token: string }) {
       return api.createShipment(fulfillmentQuery.data.fulfillmentOrderId, token);
     },
     onSuccess: (response) => {
+      setShipmentId(response.shipmentId);
       setMessage(`Created shipment ${response.shipmentId}`);
       shipmentQuery.refetch();
     },
@@ -186,39 +192,57 @@ export function OrderFlowPage({ token }: { token: string }) {
   });
 
   const fulfillmentQuery = useQuery({
-    enabled: Boolean(orderIntentId),
-    queryKey: ["fulfillment", orderIntentId],
-    queryFn: () => api.getFulfillmentByOrderIntent(orderIntentId!, token),
+    enabled: Boolean(fulfillmentOrderId),
+    queryKey: ["fulfillment", fulfillmentOrderId],
+    queryFn: () => api.getFulfillmentById(fulfillmentOrderId!, token),
     refetchInterval: 5000,
   });
 
   const shipmentQuery = useQuery({
-    enabled: Boolean(orderIntentId),
-    queryKey: ["shipment", orderIntentId],
-    queryFn: () => api.getShipmentByOrderIntent(orderIntentId!, token),
+    enabled: Boolean(shipmentId),
+    queryKey: ["shipment", shipmentId],
+    queryFn: () => api.getShipmentById(shipmentId!, token),
     refetchInterval: 5000,
   });
 
   const canQueryNetwork = shipmentQuery.data?.status != null && shipmentQuery.data.status !== "CREATED";
 
   const networkShipmentQuery = useQuery({
-    enabled: canQueryNetwork,
-    queryKey: ["network-shipment", orderIntentId],
-    queryFn: () => api.getNetworkShipmentByOrderIntent(orderIntentId!, token),
+    enabled: Boolean(shipmentId) && canQueryNetwork,
+    queryKey: ["network-shipment", shipmentId],
+    queryFn: async () => {
+      try {
+        return await api.getNetworkShipmentByShipmentId(shipmentId!, token);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
     refetchInterval: 5000,
   });
 
   const timelineQuery = useQuery({
-    enabled: canQueryNetwork,
-    queryKey: ["timeline", orderIntentId],
-    queryFn: () => api.getScanTimelineByOrderIntent(orderIntentId!, token),
+    enabled: Boolean(shipmentId) && canQueryNetwork,
+    queryKey: ["timeline", shipmentId],
+    queryFn: async () => {
+      try {
+        return await api.getScanTimelineByShipmentId(shipmentId!, token);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
     refetchInterval: 5000,
   });
 
   const notificationsQuery = useQuery({
-    enabled: Boolean(orderIntentId),
-    queryKey: ["notifications", orderIntentId],
-    queryFn: () => api.listNotificationsByOrderIntent(orderIntentId!, token),
+    enabled: Boolean(shipmentId),
+    queryKey: ["notifications", shipmentId],
+    queryFn: () => api.listNotificationsByShipmentId(shipmentId!, token),
     refetchInterval: 5000,
   });
 
@@ -390,7 +414,7 @@ export function OrderFlowPage({ token }: { token: string }) {
                 Tracking transitions
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                {["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
+                {["HUB_RECEIVED", "OUT_FOR_DELIVERY", "DELIVERED"].map((scanType) => (
                   <Button
                     disabled={!networkShipmentQuery.data}
                     key={scanType}

@@ -16,7 +16,7 @@ import type {
   TokenResponse,
 } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8008";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -100,6 +100,9 @@ export const api = {
       { method: "POST", token },
     );
   },
+  getFulfillmentById(fulfillmentOrderId: string, token: string) {
+    return request<FulfillmentOrderResponse>(`/api/v1/fulfillment-orders/${fulfillmentOrderId}`, { token });
+  },
   getFulfillmentByOrderIntent(orderIntentId: string, token: string) {
     return request<FulfillmentOrderResponse>(`/api/v1/fulfillment-orders/by-order-intent/${orderIntentId}`, { token });
   },
@@ -109,6 +112,9 @@ export const api = {
       token,
       body: { carrierCode: "INTERNAL", weightGrams: 1250, packageCount: 1 },
     });
+  },
+  getShipmentById(shipmentId: string, token: string) {
+    return request<ShipmentResponse>(`/api/v1/shipments/${shipmentId}`, { token });
   },
   getShipmentByOrderIntent(orderIntentId: string, token: string) {
     return request<ShipmentResponse>(`/api/v1/shipments/by-order-intent/${orderIntentId}`, { token });
@@ -121,6 +127,9 @@ export const api = {
   },
   deliverShipment(shipmentId: string, token: string) {
     return request<ShipmentResponse>(`/api/v1/shipments/${shipmentId}/deliver`, { method: "POST", token });
+  },
+  getNetworkShipmentByShipmentId(shipmentId: string, token: string) {
+    return request<NetworkShipmentResponse>(`/api/v1/network-shipments/${shipmentId}`, { token });
   },
   getNetworkShipmentByOrderIntent(orderIntentId: string, token: string) {
     return request<NetworkShipmentResponse>(`/api/v1/network-shipments/by-order-intent/${orderIntentId}`, { token });
@@ -136,8 +145,14 @@ export const api = {
       body: payload,
     });
   },
+  getScanTimelineByShipmentId(shipmentId: string, token: string) {
+    return request<ScanTimelineResponse>(`/api/v1/scan-events/shipments/${shipmentId}`, { token });
+  },
   getScanTimelineByOrderIntent(orderIntentId: string, token: string) {
     return request<ScanTimelineResponse>(`/api/v1/scan-events/order-intents/${orderIntentId}`, { token });
+  },
+  listNotificationsByShipmentId(shipmentId: string, token: string) {
+    return request<NotificationResponse[]>(`/api/v1/notifications/shipments/${shipmentId}`, { token });
   },
   listNotificationsByOrderIntent(orderIntentId: string, token: string) {
     return request<NotificationResponse[]>(`/api/v1/notifications/order-intents/${orderIntentId}`, { token });

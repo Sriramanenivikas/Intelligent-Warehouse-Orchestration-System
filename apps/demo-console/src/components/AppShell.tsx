@@ -52,17 +52,13 @@ export function AppShell({ session, onLogout }: { session: TokenResponse; onLogo
         }}
       >
         <Toolbar sx={{ gap: 2, justifyContent: "space-between", minHeight: 84 }}>
-          <Stack spacing={0.4}>
+          <Stack spacing={0.25}>
             <Typography sx={{ color: "text.primary" }} variant="h6">
-              IWOS Operations Console
-            </Typography>
-            <Typography color="text.secondary" variant="body2">
-              Fulfillment, parcel movement, forecasting, and control-tower visibility
+              Operations Console
             </Typography>
           </Stack>
-          <Stack alignItems="center" direction="row" spacing={1.25}>
-            <Chip color="primary" icon={<BoltRounded />} label="Live Local Cell" size="small" variant="filled" />
-            <Chip color="secondary" label="JWT Edge" size="small" variant="outlined" />
+          <Stack alignItems="center" direction="row" spacing={1}>
+            <Chip color="primary" icon={<BoltRounded />} label="Local" size="small" variant="filled" />
             <Stack alignItems="flex-end" spacing={0.15}>
               <Typography fontWeight={600} variant="body2">
                 {session.username}
@@ -96,12 +92,9 @@ export function AppShell({ session, onLogout }: { session: TokenResponse; onLogo
         variant="permanent"
       >
         <Toolbar sx={{ minHeight: 96, px: 3 }}>
-          <Stack spacing={0.85}>
+          <Stack spacing={0.25}>
             <Typography fontWeight={800} variant="h6">
               IWOS
-            </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.74)" }} variant="body2">
-              Operations Console
             </Typography>
           </Stack>
         </Toolbar>
@@ -115,10 +108,7 @@ export function AppShell({ session, onLogout }: { session: TokenResponse; onLogo
               bgcolor: "rgba(255,255,255,0.06)",
             }}
           >
-            <Stack spacing={1}>
-              <Typography sx={{ color: "rgba(255,255,255,0.72)", letterSpacing: 1.2, textTransform: "uppercase" }} variant="caption">
-                Session Scope
-              </Typography>
+            <Stack spacing={0.6}>
               <Typography fontWeight={700} variant="body2">
                 {session.role}
               </Typography>
@@ -168,15 +158,12 @@ export function AppShell({ session, onLogout }: { session: TokenResponse; onLogo
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <Stack spacing={1.1}>
-              <Typography sx={{ color: "rgba(255,255,255,0.72)", letterSpacing: 1.2, textTransform: "uppercase" }} variant="caption">
-                System Posture
-              </Typography>
+            <Stack spacing={0.45}>
               <Typography fontWeight={700} variant="body2">
-                Real demo stack
+                {session.username}
               </Typography>
               <Typography sx={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.6 }} variant="caption">
-                Kong-secured APIs, event-driven services, control-tower read models, and 15-minute forecasting refresh.
+                {session.region}
               </Typography>
             </Stack>
           </Box>
