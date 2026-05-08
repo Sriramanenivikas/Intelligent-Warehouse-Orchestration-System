@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Alert, Box, Grid, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { api, formatDateTime } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { SectionCard } from "../components/SectionCard";
@@ -19,6 +19,7 @@ export function ReturnsPage({ token }: { token: string }) {
 
   const returns = returnsQuery.data ?? [];
   const receivedCount = returns.filter((entry) => entry.status === "RECEIVED").length;
+  const approvedCount = returns.filter((entry) => entry.status === "APPROVED").length;
 
   return (
     <>
@@ -27,9 +28,9 @@ export function ReturnsPage({ token }: { token: string }) {
           { label: "Reverse Logistics", color: "primary" },
           { label: "Customer 001", color: "secondary" },
         ]}
-        description="This view is intentionally minimal. It proves the reverse-logistics lifecycle exists in the backend and can be surfaced next to the primary order and shipment flows."
+        description="Reverse-logistics lifecycle for the demo customer. This view surfaces return state next to the main forward-fulfillment stack."
         eyebrow="Returns"
-        title="Return Request Lifecycle"
+        title="Reverse Flow State"
       />
 
       {returnsQuery.isLoading ? <LinearProgress sx={{ mt: 3 }} /> : null}
@@ -39,19 +40,39 @@ export function ReturnsPage({ token }: { token: string }) {
           <StatCard label="Return Requests" value={returns.length} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <StatCard label="Received" value={receivedCount} />
+          <StatCard helper={`${approvedCount} approved`} label="Received" value={receivedCount} />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatCard
-            helper={returns[0] ? formatDateTime(returns[0].updatedAt) : "N/A"}
-            label="Latest Activity"
-            value={returns[0]?.status ?? "-"}
+            helper={returns[0] ? formatDateTime(returns[0].requestedAt) : "N/A"}
+            label="Latest Request"
+            value={returns[0]?.reasonCode ?? "-"}
           />
         </Grid>
       </Grid>
 
       <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <SectionCard subtitle="Current lifecycle volume for the demo customer." title="Lifecycle Mix">
+            <Stack spacing={1.25}>
+              {["REQUESTED", "APPROVED", "RECEIVED"].map((status) => {
+                const count = returns.filter((entry) => entry.status === status).length;
+                return (
+                  <Box key={status} sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
+                    <Typography color="text.secondary" variant="body2">
+                      {status.replaceAll("_", " ")}
+                    </Typography>
+                    <Typography fontWeight={700} variant="body2">
+                      {count}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Stack>
+          </SectionCard>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 8 }}>
           <SectionCard subtitle="Backend-backed reverse logistics states for the demo customer." title="Return Requests">
             <Table size="small">
               <TableHead>
@@ -60,7 +81,7 @@ export function ReturnsPage({ token }: { token: string }) {
                   <TableCell>Order Intent</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Reason</TableCell>
-                  <TableCell>Channel</TableCell>
+                  <TableCell>Node</TableCell>
                   <TableCell>Updated</TableCell>
                 </TableRow>
               </TableHead>
@@ -77,10 +98,10 @@ export function ReturnsPage({ token }: { token: string }) {
                         {entry.reasonCode}
                       </Typography>
                       <Typography color="text.secondary" variant="caption">
-                        {entry.notes ?? "No extra notes"}
+                        {entry.reasonDetail ?? "No extra detail"}
                       </Typography>
                     </TableCell>
-                    <TableCell>{entry.channel}</TableCell>
+                    <TableCell>{entry.nodeId}</TableCell>
                     <TableCell>{formatDateTime(entry.updatedAt)}</TableCell>
                   </TableRow>
                 ))}

@@ -1,9 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert,
+  Box,
   Button,
   Grid,
   LinearProgress,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -32,6 +34,8 @@ export function OperationsPage({ token }: { token: string }) {
     return <Alert severity="error">Unable to load control tower snapshot.</Alert>;
   }
 
+  const snapshot = snapshotQuery.data;
+
   return (
     <>
       <PageHeader
@@ -41,41 +45,62 @@ export function OperationsPage({ token }: { token: string }) {
           </Button>
         }
         badges={[
-          { label: "Fulfillment", color: "primary" },
-          { label: "Shipment Network", color: "secondary" },
+          { label: "Control Tower", color: "primary" },
+          { label: "Execution State", color: "secondary" },
           { label: "Exceptions", color: "warning" },
         ]}
-        description="This is the cross-service operational read model. It aggregates the latest control tower snapshot for planning KPIs, shipment states, scan events, and exception visibility."
-        eyebrow="Control Tower"
-        title="Operations Snapshot"
+        description="Cross-service read model for backlog, planning alerts, shipment anomalies, and signal volume across the running cell."
+        eyebrow="Ops Center"
+        title="Cell Operations Snapshot"
       />
 
       {snapshotQuery.isLoading || refreshMutation.isPending ? <LinearProgress sx={{ mt: 3 }} /> : null}
 
       <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
         <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-          <StatCard label="Forecast Rows" value={snapshotQuery.data?.forecastKpi.totalForecasts ?? "-"} />
+          <StatCard helper="Planned SKU-node combinations" label="Forecast Rows" value={snapshot?.forecastKpi.totalForecasts ?? "-"} />
         </Grid>
         <Grid size={{ xs: 12, md: 6, xl: 3 }}>
           <StatCard
+            helper="Immediate action candidates"
             label="Critical + High"
-            value={(snapshotQuery.data?.forecastKpi.criticalCount ?? 0) + (snapshotQuery.data?.forecastKpi.highCount ?? 0)}
+            value={(snapshot?.forecastKpi.criticalCount ?? 0) + (snapshot?.forecastKpi.highCount ?? 0)}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-          <StatCard label="Recent Exceptions" value={snapshotQuery.data?.recentExceptions.length ?? "-"} />
+          <StatCard helper="Latest scan and network anomalies" label="Recent Exceptions" value={snapshot?.recentExceptions.length ?? "-"} />
         </Grid>
         <Grid size={{ xs: 12, md: 6, xl: 3 }}>
-          <StatCard
-            helper={formatDateTime(snapshotQuery.data?.generatedAt)}
-            label="Model Version"
-            value={snapshotQuery.data?.modelVersion ?? "-"}
-          />
+          <StatCard helper={formatDateTime(snapshot?.generatedAt)} label="Model Version" value={snapshot?.modelVersion ?? "-"} />
         </Grid>
       </Grid>
 
       <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
-        <Grid size={{ xs: 12, xl: 6 }}>
+        <Grid size={{ xs: 12, xl: 4 }}>
+          <SectionCard subtitle="Status volumes pulled from the latest snapshot." title="Backlog and Signal Mix">
+            <Stack spacing={1.25}>
+              {[
+                { label: "Order intents", value: (snapshot?.orderIntentsByStatus ?? []).reduce((sum, item) => sum + item.count, 0) },
+                { label: "Fulfillment orders", value: (snapshot?.fulfillmentOrdersByStatus ?? []).reduce((sum, item) => sum + item.count, 0) },
+                { label: "Shipments", value: (snapshot?.shipmentsByStatus ?? []).reduce((sum, item) => sum + item.count, 0) },
+                { label: "Network shipments", value: (snapshot?.networkShipmentsByStatus ?? []).reduce((sum, item) => sum + item.count, 0) },
+                { label: "Scan events", value: (snapshot?.scanEventsByType ?? []).reduce((sum, item) => sum + item.count, 0) },
+                { label: "Notifications", value: (snapshot?.notificationsByStatus ?? []).reduce((sum, item) => sum + item.count, 0) },
+              ].map((row) => (
+                <Box key={row.label} sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
+                  <Typography color="text.secondary" variant="body2">
+                    {row.label}
+                  </Typography>
+                  <Typography fontWeight={700} variant="body2">
+                    {row.value}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </SectionCard>
+        </Grid>
+
+        <Grid size={{ xs: 12, xl: 8 }}>
           <SectionCard subtitle="Highest-priority inventory planning alerts from the control-tower snapshot." title="Top Forecast Alerts">
             <Table size="small">
               <TableHead>
@@ -88,7 +113,7 @@ export function OperationsPage({ token }: { token: string }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {(snapshotQuery.data?.topForecasts ?? []).map((forecast) => (
+                {(snapshot?.topForecasts ?? []).map((forecast) => (
                   <TableRow key={forecast.forecastId}>
                     <TableCell>{forecast.nodeId}</TableCell>
                     <TableCell>{forecast.sku}</TableCell>
@@ -103,7 +128,9 @@ export function OperationsPage({ token }: { token: string }) {
             </Table>
           </SectionCard>
         </Grid>
+      </Grid>
 
+      <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
         <Grid size={{ xs: 12, xl: 6 }}>
           <SectionCard subtitle="Latest shipment anomalies surfaced from scan-event and network state." title="Recent Scan Exceptions">
             <Table size="small">
@@ -116,7 +143,7 @@ export function OperationsPage({ token }: { token: string }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {(snapshotQuery.data?.recentExceptions ?? []).map((exception) => (
+                {(snapshot?.recentExceptions ?? []).map((exception) => (
                   <TableRow key={`${exception.shipmentId}-${exception.occurredAt}`}>
                     <TableCell>{exception.awbNumber}</TableCell>
                     <TableCell>
@@ -130,12 +157,47 @@ export function OperationsPage({ token }: { token: string }) {
             </Table>
           </SectionCard>
         </Grid>
+
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <SectionCard subtitle="Fulfillment and parcel state distribution across the running cell." title="Execution State">
+            <Stack spacing={1.25}>
+              {(snapshot?.fulfillmentOrdersByStatus ?? []).map((item) => (
+                <Box key={`fo-${item.key}`} sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
+                  <Typography variant="body2">{item.key}</Typography>
+                  <Typography fontWeight={700} variant="body2">
+                    {item.count}
+                  </Typography>
+                </Box>
+              ))}
+              {(snapshot?.shipmentsByStatus ?? []).map((item) => (
+                <Box key={`ship-${item.key}`} sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
+                  <Typography color="text.secondary" variant="body2">
+                    Shipment {item.key}
+                  </Typography>
+                  <Typography fontWeight={700} variant="body2">
+                    {item.count}
+                  </Typography>
+                </Box>
+              ))}
+              {(snapshot?.networkShipmentsByStatus ?? []).map((item) => (
+                <Box key={`net-${item.key}`} sx={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
+                  <Typography color="text.secondary" variant="body2">
+                    Network {item.key}
+                  </Typography>
+                  <Typography fontWeight={700} variant="body2">
+                    {item.count}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </SectionCard>
+        </Grid>
       </Grid>
 
       <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SectionCard subtitle="Current order-intent snapshot." title="Order Intake">
-            {(snapshotQuery.data?.orderIntentsByStatus ?? []).map((item) => (
+          <SectionCard subtitle="Current order-intent backlog from the latest snapshot." title="Order Intake">
+            {(snapshot?.orderIntentsByStatus ?? []).map((item) => (
               <Grid alignItems="center" container key={item.key}>
                 <Grid size={{ xs: 8 }}>
                   <Typography variant="body2">{item.key}</Typography>
@@ -149,39 +211,10 @@ export function OperationsPage({ token }: { token: string }) {
             ))}
           </SectionCard>
         </Grid>
+
         <Grid size={{ xs: 12, md: 4 }}>
-          <SectionCard subtitle="Current fulfillment and shipment status distribution." title="Execution State">
-            {(snapshotQuery.data?.fulfillmentOrdersByStatus ?? []).map((item) => (
-              <Grid alignItems="center" container key={`fo-${item.key}`}>
-                <Grid size={{ xs: 8 }}>
-                  <Typography variant="body2">{item.key}</Typography>
-                </Grid>
-                <Grid size={{ xs: 4 }}>
-                  <Typography align="right" fontWeight={700} variant="body2">
-                    {item.count}
-                  </Typography>
-                </Grid>
-              </Grid>
-            ))}
-            {(snapshotQuery.data?.shipmentsByStatus ?? []).map((item) => (
-              <Grid alignItems="center" container key={`ship-${item.key}`}>
-                <Grid size={{ xs: 8 }}>
-                  <Typography color="text.secondary" variant="body2">
-                    Shipment {item.key}
-                  </Typography>
-                </Grid>
-                <Grid size={{ xs: 4 }}>
-                  <Typography align="right" fontWeight={700} variant="body2">
-                    {item.count}
-                  </Typography>
-                </Grid>
-              </Grid>
-            ))}
-          </SectionCard>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <SectionCard subtitle="Notification and scan volume from the snapshot." title="Signals">
-            {(snapshotQuery.data?.scanEventsByType ?? []).map((item) => (
+          <SectionCard subtitle="Scan event mix from the latest snapshot." title="Signals">
+            {(snapshot?.scanEventsByType ?? []).map((item) => (
               <Grid alignItems="center" container key={`scan-${item.key}`}>
                 <Grid size={{ xs: 8 }}>
                   <Typography variant="body2">{item.key}</Typography>
@@ -193,11 +226,28 @@ export function OperationsPage({ token }: { token: string }) {
                 </Grid>
               </Grid>
             ))}
-            {(snapshotQuery.data?.notificationsByStatus ?? []).map((item) => (
+          </SectionCard>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionCard subtitle="Notification state and audience split from the latest snapshot." title="Notifications">
+            {(snapshot?.notificationsByStatus ?? []).map((item) => (
               <Grid alignItems="center" container key={`notif-${item.key}`}>
                 <Grid size={{ xs: 8 }}>
+                  <Typography variant="body2">Status {item.key}</Typography>
+                </Grid>
+                <Grid size={{ xs: 4 }}>
+                  <Typography align="right" fontWeight={700} variant="body2">
+                    {item.count}
+                  </Typography>
+                </Grid>
+              </Grid>
+            ))}
+            {(snapshot?.notificationsByAudience ?? []).map((item) => (
+              <Grid alignItems="center" container key={`aud-${item.key}`}>
+                <Grid size={{ xs: 8 }}>
                   <Typography color="text.secondary" variant="body2">
-                    Notification {item.key}
+                    Audience {item.key}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 4 }}>
